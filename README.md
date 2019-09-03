@@ -13,7 +13,7 @@ Python website validator. Checks W3C, PageSpeed, SEO, Mobile, etc
 * Create a folder in C:/Users/YOUR_USER/AppData/ and name it as **Geckodriver**
 * Extract the geckodriver.exe in the ZIP file from the step below and put it in the folder Geckodriver
 
-IMAGE GOES HERE
+![Example Geckodriver directory path](/images/example-01.png)
 
 * Open the command prompt and paste fhe following command
   * setx path "%path%;C:\Users\YOUR_USER\AppData\Local\Geckodriver"
