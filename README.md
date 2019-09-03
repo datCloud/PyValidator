@@ -19,4 +19,8 @@ Python website validator. Checks W3C, PageSpeed, SEO, Mobile, etc
   * setx path "%path%;C:\Users\YOUR_USER\AppData\Local\Geckodriver"
 * This command will set the Geckodriver directory in your environment variables
 * Restart your computer
+* Open your internet browser and log into your Google Account
+* Access the [Google preferences panel](https://www.google.com/preferences)
+* Set the Results per page  to 100 and click on the Save at end of the page
+* Solve the reCAPTCHA
 * Test the script
