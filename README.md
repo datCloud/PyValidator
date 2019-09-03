@@ -18,7 +18,9 @@ pip install colorama
 ![Example Geckodriver directory path](/images/example-01.png)
 
 * Open the command prompt and paste fhe following command
-  * setx path "%path%;C:\Users\YOUR_USER\AppData\Local\Geckodriver"
+```bash
+setx path "%path%;C:\Users\YOUR_USER\AppData\Local\Geckodriver"
+```
 * This command will set the Geckodriver directory in your environment variables
 * Restart your computer
 * Open your internet browser and log into your Google Account
