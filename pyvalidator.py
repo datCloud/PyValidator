@@ -41,7 +41,7 @@ while ' -' not in url:
     print('-a ─────── Check all errors')
     print('MISC')
     print('-x ─────── Use sitemap.xml to get site links')
-    print('-i ─────── Use sitemap.xml to get site links')
+    print('-u ─────── Check User Analytics')
     print('\nExample: [url] [parameter] [...]', Style.RESET_ALL)
     url = input(str('\nPaste the url here: '))
 
@@ -61,7 +61,7 @@ vMenus = True if ' -c' in url else False
 vMobile = True if ' -l' in url else False
 vAll = True if ' -a' in url else False
 vSitemap = True if ' -x' in url else False
-vMisc = True if ' -i' in url else False
+vMisc = True if ' -u' in url else False
 
 if vAll:
     vPagespeed = True
@@ -86,6 +86,8 @@ session = HTMLSession()
 r = session.get(url)
 insideLinks = r.html.absolute_links
 menuTop = r.html.absolute_links
+
+hasSitemap = False
 
 # Check robots.txt
 r = session.get(url + 'robots.txt')
@@ -269,9 +271,7 @@ if vPagespeed:
     #desktopUrl = f'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={url}&category={category}&locale={locale}&strategy=desktop&key={apiKey}'
     #mobileUrl = f'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={url}&category={category}&locale={locale}&strategy=mobile&key={apiKey}'
 
-print('Getting links...')
-
-def site_urls(insideLinks, counter):
+def site_urls(insideLinks, counter, hasSitemap):
     if vSitemap:
         sitemapUrl = url + 'sitemap.xml'
         sitemapResquest = session.get(sitemapUrl)
@@ -283,8 +283,10 @@ def site_urls(insideLinks, counter):
             if url + '404' in visitedLinks:
                 print('Found 404 link in sitemap.xml')
             return 0
-        else:
+        elif not hasSitemap:
             print('The site doesn\'t have a sitemap.xml file')
+            print('Getting links...')
+            hasSitemap = True
     for link in insideLinks:
         if 'http' in link and root in link:
             if valid_url(link):
@@ -301,7 +303,7 @@ def site_urls(insideLinks, counter):
             visitedLinks.append(link)
             r = session.get(link)
             pageLinks = r.html.absolute_links
-            site_urls(pageLinks, counter)
+            site_urls(pageLinks, counter, hasSitemap)
 
 def CheckForUniqueLinks(uniqueLinks):
     r = session.get(url + '/mapa-site')
@@ -321,7 +323,7 @@ def CheckForUniqueLinks(uniqueLinks):
         print('------------------------')
 
 if vW3C or vSEO or vMPI or vMobile:
-    site_urls(insideLinks, count)
+    site_urls(insideLinks, count, hasSitemap)
 
 def CompareMenus():
     r = session.get(url)
