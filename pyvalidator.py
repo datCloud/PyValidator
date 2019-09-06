@@ -19,6 +19,7 @@ from selenium import webdriver
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 import random
 from itertools import groupby
+from selenium.webdriver.firefox.options import Options
 
 url = ''
 
@@ -36,16 +37,19 @@ while ' -' not in url:
     print('-u ─────── Search for links that aren\'t in the menu')
     print('-c ─────── Compare menus')
     print('-l ─────── Check lateral scroll on mobile')
+    print('-x ─────── Use sitemap.xml to get site links')
     print('-a ─────── Check all errors')
     print('\nExample: [url] [parameter] [...]', Style.RESET_ALL)
     url = input(str('\nPaste the url here: '))
 
-def main_url(url):
-    url = url.split('//')
-    url = url[1].split('/')
-    return url[0]
+def main_url(cleanUrl):
+    cleanUrl = cleanUrl.split('//')
+    cleanUrl = cleanUrl[1].split('/')
+    return cleanUrl[0]
 
 root = main_url(url)
+
+checkOnlySitemap = True
 
 vPagespeed = True if ' -p' in url else False
 vW3C = True if ' -w' in url else False
@@ -66,6 +70,7 @@ if vAll:
     vMobile = True
 
 url = url.split(' ')[0]
+if url[-1:] != '/' : url = url + '/'
 
 def valid_url(url):
     if '?' not in url and '#' not in url and '.jpg' not in url and '.jpeg' not in url and '.png' not in url and '.png' not in url and '.pdf' not in url and 'tel:' not in url and 'mailto:' not in url:
@@ -80,9 +85,13 @@ insideLinks = r.html.absolute_links
 menuTop = r.html.absolute_links
 
 if vMobile:
+    binary = r'C:\Program Files\Mozilla Firefox\firefox.exe'
+    options = Options()
+    options.add_argument('--headless')
+    options.binary = binary
     cap = DesiredCapabilities().FIREFOX
     cap["marionette"] = False
-    driver = webdriver.Firefox(capabilities=cap, executable_path="%USERPROFILE%\\AppData\\Local\\Geckodriver\\geckodriver.exe")
+    driver = webdriver.Firefox(options=options, capabilities=cap, executable_path="%USERPROFILE%\\AppData\\Local\\Geckodriver\\geckodriver.exe")
     driver.set_window_position(0, 0)
     driver.set_window_size(350, 568)
 
@@ -247,6 +256,14 @@ if vPagespeed:
 print('Getting links...')
 
 def site_urls(insideLinks, counter):
+    if checkOnlySitemap:
+        sitemapUrl = url + 'sitemap.xml'
+        sitemapResquest = session.get(sitemapUrl)
+        sitemapLinks = sitemapResquest.html.find('loc')
+        if len(sitemapLinks) > 0:
+            for sitemapItem in sitemapLinks:
+                visitedLinks.append(sitemapItem.text)
+            return 0
     for link in insideLinks:
         if 'http' in link and root in link:
             if valid_url(link):
