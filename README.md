@@ -1,4 +1,4 @@
-# PyValidator
+# PyValidator [![Licensed under the MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/datCloud/PyValidator/blob/master/LICENSE)
 Python website validator. Checks W3C, PageSpeed, SEO, Mobile, etc
 
 ## Instructions
