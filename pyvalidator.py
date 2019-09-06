@@ -30,6 +30,7 @@ while ' -' not in url:
     print('│          INSTRUCTIONS          │')
     print('└────────────────────────────────┘')
     print('\nPaste the site URL followed by desired parameters\n')
+    print('GENERAL')
     print('-p ─────── Pagespeed (BETA)')
     print('-w ─────── W3C')
     print('-s ─────── SEO structure (Alt and Title)')
@@ -37,8 +38,10 @@ while ' -' not in url:
     print('-u ─────── Search for links that aren\'t in the menu')
     print('-c ─────── Compare menus')
     print('-l ─────── Check lateral scroll on mobile')
-    print('-x ─────── Use sitemap.xml to get site links')
     print('-a ─────── Check all errors')
+    print('MISC')
+    print('-x ─────── Use sitemap.xml to get site links')
+    print('-i ─────── Use sitemap.xml to get site links')
     print('\nExample: [url] [parameter] [...]', Style.RESET_ALL)
     url = input(str('\nPaste the url here: '))
 
@@ -56,8 +59,9 @@ vMPI = True if ' -m' in url else False
 vUniqueLinks = True if ' -u' in url else False
 vMenus = True if ' -c' in url else False
 vMobile = True if ' -l' in url else False
-vSitemap = True if ' -x' in url else False
 vAll = True if ' -a' in url else False
+vSitemap = True if ' -x' in url else False
+vMisc = True if ' -i' in url else False
 
 if vAll:
     vPagespeed = True
@@ -83,7 +87,15 @@ r = session.get(url)
 insideLinks = r.html.absolute_links
 menuTop = r.html.absolute_links
 
-if vMobile:
+# Check robots.txt
+r = session.get(url + 'robots.txt')
+robots = r.text
+if url in robots:
+    print('Robots -> Ok')
+else:
+    print('Robots -> Wrong')
+
+if vMobile or vMisc:
     binary = r'C:\Program Files\Mozilla Firefox\firefox.exe'
     options = Options()
     options.add_argument('--headless')
@@ -93,6 +105,11 @@ if vMobile:
     driver = webdriver.Firefox(options=options, capabilities=cap, executable_path="%USERPROFILE%\\AppData\\Local\\Geckodriver\\geckodriver.exe")
     driver.set_window_position(0, 0)
     driver.set_window_size(350, 568)
+
+if vMisc:
+    driver.get(url)
+    analyticsId = driver.execute_script('return Object.keys(window.gaData)[0]')
+    print('Analytics ID -> ' + analyticsId)
 
 def GetWidth(pageUrl):    
     driver.get(pageUrl)
@@ -262,6 +279,9 @@ def site_urls(insideLinks, counter):
         if len(sitemapLinks) > 0:
             for sitemapItem in sitemapLinks:
                 visitedLinks.append(sitemapItem.text)
+            sitemapLinks = visitedLinks
+            if url + '404' in visitedLinks:
+                print('Found 404 link in sitemap.xml')
             return 0
         else:
             print('The site doesn\'t have a sitemap.xml file')
