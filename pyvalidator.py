@@ -11,6 +11,7 @@ from requests_html import HTMLSession
 from tqdm import tqdm
 import time
 import os
+import inspect
 import errno
 from socket import error as socket_error
 import json
@@ -52,6 +53,9 @@ def main_url(cleanUrl):
 
 root = main_url(url)
 
+# currentDirectory = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+# keywordsFile = open(os.path.join(currentDirectory, 'keywords.txt'), 'r')
+
 vPagespeed = True if ' -p' in url else False
 vW3C = True if ' -w' in url else False
 vSEO = True if ' -s' in url else False
@@ -62,6 +66,7 @@ vMobile = True if ' -l' in url else False
 vAll = True if ' -a' in url else False
 vSitemap = True if ' -x' in url else False
 vMisc = True if ' -u' in url else False
+vMisc = False
 
 if vAll:
     vPagespeed = True
@@ -71,9 +76,11 @@ if vAll:
     vUniqueLinks = True
     vMenus = True
     vMobile = True
+    vMisc = False
 
 url = url.split(' ')[0]
 if url[-1:] != '/' : url = url + '/'
+fullUrl = url
 
 def valid_url(url):
     if '?' not in url and '#' not in url and '.jpg' not in url and '.jpeg' not in url and '.png' not in url and '.png' not in url and '.pdf' not in url and 'tel:' not in url and 'mailto:' not in url:
@@ -84,7 +91,7 @@ def valid_url(url):
 
 session = HTMLSession()
 r = session.get(url)
-insideLinks = r.html.absolute_links
+insideLinks = r.html.xpath('//a[not(@rel="nofollow")]/@href')
 menuTop = r.html.absolute_links
 
 hasSitemap = False
@@ -98,13 +105,15 @@ else:
     print('Robots -> Wrong')
 
 if vMobile or vMisc:
-    binary = r'C:\Program Files\Mozilla Firefox\firefox.exe'
+
+    # binary = r'C:\Program Files\Mozilla Firefox\firefox.exe'
     options = Options()
     options.add_argument('--headless')
-    options.binary = binary
-    cap = DesiredCapabilities().FIREFOX
-    cap["marionette"] = False
-    driver = webdriver.Firefox(options=options, capabilities=cap, executable_path="%USERPROFILE%\\AppData\\Local\\Geckodriver\\geckodriver.exe")
+    # options.binary = binary
+    # cap = DesiredCapabilities().FIREFOX
+    # cap["marionette"] = False
+    # driver = webdriver.Firefox(options=options, capabilities=cap, executable_path="%USERPROFILE%\\AppData\\Local\\Geckodriver\\geckodriver.exe")
+    driver = webdriver.Firefox(options=options)
     driver.set_window_position(0, 0)
     driver.set_window_size(350, 568)
 
@@ -142,7 +151,6 @@ if vMPI:
     def CheckIssues(mpiLinks):
         issueUrls = []
         for link in tqdm(mpiLinks):
-            print('\n')
             w3cLink = f"{link}"
             try:
                 r = session.get(w3cLink)
@@ -150,10 +158,22 @@ if vMPI:
                 if serr.errno == errno.ECONNREFUSED:
                     print('Link inválido:', link, serr)
                     continue
-            description = len(r.html.find('head meta[name="description"]', first=True).attrs['content'])
+            # description = len(r.html.find('head meta[name="description"]', first=True).attrs['content'])
+            description = r.html.find('head meta[name="description"]', first=True).attrs['content']
             images = len(r.html.find('article ul.gallery img'))
-            h2 = len(r.html.find('article h2'))
+            h2 = r.html.find('article h2')
             articleElements = r.html.find('article h2, article p')
+
+            try:
+                h1 = r.html.find('h1', first=True).text
+            except AttributeError as aerr:
+                h1 = 'Not found'
+                continue
+
+            h2HasH1 = False
+            for uniqueH2 in  h2:
+                if h1 in uniqueH2.text:
+                    h2HasH1 = True
 
             emptyElements = []
             for emptyElement in articleElements:
@@ -177,6 +197,12 @@ if vMPI:
 
             sequentialList = r.html.find('article ul + ul')
 
+            if h1.lower() not in description.lower() : 
+                print(f'Description doesn\'t have mention to H1')
+                hasIssues = True
+            if h1 == 'Not found':
+                print(f'H1 not found')
+                hasIssue = True
             if len(pUpper) > 0:
                 print(f'There are {len(pUpper)} uppercase p')
                 hasIssues = True
@@ -186,15 +212,18 @@ if vMPI:
             if len(emptyElements) > 0:
                 print(f'There are {len(emptyElements)} empty elements')
                 hasIssues = True
-            if description < 140 or description > 160 : 
-                print('Description char count:', description)
+            if len(description) < 140 or len(description) > 160 : 
+                print(f'Description char count:', description)
                 hasIssues = True
-            if images < 3 :
+            if images < 1 :
                 print('Image count:', images)
                 hasIssues = True
-            if h2 < 3 :
-                print('H2 count:', h2)
+            if len(h2) < 2 :
+                print('H2 count:', len(h2))
                 hasIssues = True
+            if not h2HasH1:
+                print('H2 text doesn\'t have mention to H1')
+                hasIssue = True
             if len(pList) > 0 :
                 print('p tag as list:', len(pList))
                 # print('p tag as list:')
@@ -222,7 +251,7 @@ if vPagespeed:
 
     pageSpeedLinks = [url]
 
-    while len(pageSpeedLinks) != 5:
+    while len(pageSpeedLinks) != 1:
         uniqueMpi = random.choice(mpiLinks)
         if uniqueMpi not in pageSpeedLinks:
             pageSpeedLinks.append(uniqueMpi)
@@ -299,10 +328,11 @@ def site_urls(insideLinks, counter, hasSitemap):
                 counter = 0
             # print('\033c')
             # print('Getting links ', loader[counter])
+            if link[-1:] == '/' and link != fullUrl : continue
             if 'orcamento' in link: continue
             visitedLinks.append(link)
             r = session.get(link)
-            pageLinks = r.html.absolute_links
+            pageLinks = r.html.xpath('//a[not(@rel="nofollow")]/@href')
             site_urls(pageLinks, counter, hasSitemap)
 
 def CheckForUniqueLinks(uniqueLinks):
@@ -384,14 +414,28 @@ if vW3C or vSEO or vMPI or vMobile:
 
     visitedLinks.append(url + '404')
 
+    #print(visitedLinks)
+
     for link in tqdm(visitedLinks):
-        print('\n')
         r = session.get(link)
         if vMobile:
             GetWidth(link)
         if vSEO:
             allImages = r.html.find('body img')
             allLinks = r.html.find('body a[href*="http"]')
+
+            try:
+                h1 = r.html.find('h1', first=True).text
+            except AttributeError as aerr:
+                h1 = 'Not found'
+                print(f'\nH1 not found in {link}\n')
+                continue
+
+            description = r.html.find('head meta[name="description"]', first=True).attrs['content']
+            if h1.lower() not in description.lower() and link != fullUrl: 
+                print(f'\nDescription doesn\'t have mention to H1 in {link}')
+            if len(description) < 140 or len(description) > 160 : 
+                print(f'\nDescription char count: {description} \n in {link}')
             hasNoAttrInImage = False
             hasNoAttrInLink = False
             for checkImage in allImages:
@@ -419,7 +463,7 @@ if vW3C or vSEO or vMPI or vMobile:
                     print('IMAGE WITHOUT ALT IN\n' + link + '\n[' + checkImage.attrs['src'] + ']\n')
             for checkLink in allLinks:
                     try:
-                        if 'facebook' in checkLink.attrs['title'].lower():
+                        if 'facebook' in checkLink.attrs['href'].lower():
                             continue
                         if 'escrev' in checkLink.attrs['title'].lower():
                             if not hasNoAttrInLink:
