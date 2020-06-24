@@ -198,7 +198,7 @@ if vMPI:
             h1EqualsH2 = False
             for title in h2:
                 h2List.append(title.text)
-                if title.lower() == h1 and not h1EqualsH2:
+                if title.lower() == h1.lower() and not h1EqualsH2:
                     issueMessage('There are H2 equals to H1')
                     hasIssues = True
                     h1EqualsH2 = True
