@@ -194,6 +194,14 @@ if vMPI:
                     h2HasH1 = True
                     break
 
+            h2List = []
+            for title in h2:
+                h2List.append(title.text)
+
+            if len(h2List) == len(set(h2List)):
+                issueMessages.append('There are duplicated H2')
+                hasIssues = True
+
             emptyElements = []
             for emptyElement in articleElements:
                 if len(emptyElement.text) < 6:
@@ -259,9 +267,9 @@ if vMPI:
                 issueMessages.append(f'There are {len(sequentialTitle)} title(s) in sequence')
                 hasIssues = True
             if hasIssues :
-                print(f'\nIssues:')
+                print('\n')
                 for issue in issueMessages:
-                    print(f'\t', issue)
+                    print(issue)
 
                 print('in', link)
             #time.sleep(1)
