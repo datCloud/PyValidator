@@ -198,7 +198,7 @@ if vMPI:
             for title in h2:
                 h2List.append(title.text)
 
-            if len(h2List) == len(set(h2List)):
+            if len(h2List) != len(set(h2List)):
                 issueMessages.append('There are duplicated H2')
                 hasIssues = True
 
