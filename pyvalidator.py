@@ -195,8 +195,13 @@ if vMPI:
                     break
 
             h2List = []
+            h1EqualsH2 = False
             for title in h2:
                 h2List.append(title.text)
+                if title.lower() == h1 and not h1EqualsH2:
+                    issueMessage('There are H2 equals to H1')
+                    hasIssues = True
+                    h1EqualsH2 = True
 
             if len(h2List) != len(set(h2List)):
                 issueMessages.append('There are duplicated H2')
