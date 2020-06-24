@@ -159,6 +159,7 @@ if vMPI:
         issueUrls = []
         for link in tqdm(mpiLinks):
             w3cLink = f"{link}"
+            issueMessages = []
             try:
                 r = session.get(w3cLink)
             except socket_error as serr:
@@ -173,13 +174,18 @@ if vMPI:
             strongsInArticle = r.html.find('article p strong')
             titleWithStrong = r.html.find('article h2 strong')
 
+            hasIssues = False
+
             try:
                 h1 = r.html.find('h1')
                 if(len(h1) > 1):
-                    print('\nThere is more than 1 H1 in', link)
+                    issueMessages.append('There is more than 1 H1')
+                    hasIssues = True
                 h1 = h1[0].text
             except AttributeError as aerr:
                 h1 = 'Not found'
+                issueMessages.append('There is no H1')
+                hasIssues = True
                 continue
 
             h2HasH1 = False
@@ -206,58 +212,58 @@ if vMPI:
                     pUpper.append(fakePragraph)
                             
             pList = r.html.find('article p', containing=';')
-            hasIssues = False
 
             sequentialList = r.html.find('article ul + ul')
             sequentialTitle = r.html.find('article h2 + h2')
 
             if h1.lower() not in description.lower() : 
-                print(f'Description doesn\'t have mention to H1')
-                hasIssues = True
-            if h1 == 'Not found':
-                print(f'H1 not found')
+                issueMessages.append('Description doesn\'t have mention to H1')
                 hasIssues = True
             if len(strongsInArticle) < 3:
-                print(f'There are only {len(strongsInArticle)} strongs in this article')
+                issueMessages.append(f'There are only {len(strongsInArticle)} strongs in this article')
                 hasIssues = True
             if len(titleWithStrong) > 0:
-                print(f'There are {len(titleWithStrong)} strongs inside titles')
+                issueMessages.append(f'There are only {len(strongsInArticle)} strongs in this article')
                 hasIssues = True
             if len(pUpper) > 0:
-                print(f'There are {len(pUpper)} uppercase p')
+                issueMessages.append(f'There are {len(pUpper)} uppercase p')
                 hasIssues = True
             if len(h2Lower) > 0:
-                print(f'There are {len(fakeTitles)} uppercase p')
+                issueMessages.append(f'There are {len(fakeTitles)} uppercase p')
                 hasIssues = True
             if len(emptyElements) > 0:
-                print(f'There are {len(emptyElements)} empty elements')
+                issueMessages.append(f'There are {len(emptyElements)} empty elements')
                 hasIssues = True
             if len(description) < 140 or len(description) > 160 : 
-                print(f'Description char count:', len(description))
+                issueMessages.append(f'Description char count: {len(description)}')
                 hasIssues = True
             if images < 1 :
-                print('Image count:', images)
+                issueMessages.append(f'Image count: {images}')
                 hasIssues = True
             if len(h2) < 2 :
-                print('H2 count:', len(h2))
+                issueMessages.append(f'H2 count: {len(h2)}')
                 hasIssues = True
             if not h2HasH1:
-                print('H2 text doesn\'t have mention to H1 in')
+                issueMessages.append(f'H2 text doesn\'t have mention to H1 in')
                 hasIssues = True
             if len(pList) > 0 :
-                print('p tag as list:', len(pList))
+                issueMessages.append(f'p tag as list: {len(pList)}')
                 # print('p tag as list:')
                 # for p in pList:
                 # 	print('[...]', p.text[-30:])
                 hasIssues = True
             if len(sequentialList) > 0 :
-                print('There are', len(sequentialList),'list(s) in sequence')
+                issueMessages.append(f'There are {len(sequentialList)} list(s) in sequence')
                 hasIssues = True
             if len(sequentialTitle) > 0 :
-                print('There are', len(sequentialTitle),'title(s) in sequence')
+                issueMessages.append(f'There are {len(sequentialTitle)} title(s) in sequence')
                 hasIssues = True
             if hasIssues :
-                print(link, '\n')
+                print(f'\nIssues:')
+                for issue in issueMessages:
+                    print(f'\t', issue)
+
+                print('in', link)
             #time.sleep(1)
         print('-------------- MPI Validation Finished --------------')
             
