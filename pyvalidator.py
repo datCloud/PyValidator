@@ -173,6 +173,7 @@ if vMPI:
             articleElements = r.html.find('article h2, article p')
             strongsInArticle = r.html.find('article p strong')
             titleWithStrong = r.html.find('article h2 strong')
+            allParagraphs = r.html.find('article p')
 
             hasIssues = False
 
@@ -198,13 +199,21 @@ if vMPI:
             h1EqualsH2 = False
             for title in h2:
                 h2List.append(title.text)
-                if title.lower() == h1.lower() and not h1EqualsH2:
-                    issueMessage('There are H2 equals to H1')
+                if title.text.lower() == h1.lower() and not h1EqualsH2:
+                    issueMessages.append('There are H2 equals to H1')
                     hasIssues = True
                     h1EqualsH2 = True
 
             if len(h2List) != len(set(h2List)):
                 issueMessages.append('There are duplicated H2')
+                hasIssues = True
+
+            pAllList = []
+            for paragraph in allParagraphs:
+                pAllList.append(paragraph.text)
+
+            if len(pAllList) != len(set(pAllList)):
+                issueMessages.append('There are duplicated paragraphs')
                 hasIssues = True
 
             emptyElements = []
