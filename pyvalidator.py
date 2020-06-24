@@ -170,6 +170,8 @@ if vMPI:
             images = len(r.html.find('article ul.gallery img'))
             h2 = r.html.find('article h2')
             articleElements = r.html.find('article h2, article p')
+            strongsInArticle = r.html.find('article p strong')
+            titleWithStrong = r.html.find('article h2 strong')
 
             try:
                 h1 = r.html.find('h1')
@@ -214,6 +216,12 @@ if vMPI:
                 hasIssues = True
             if h1 == 'Not found':
                 print(f'H1 not found')
+                hasIssues = True
+            if len(strongsInArticle) < 3:
+                print(f'There are only {len(strongsInArticle)} strongs in this article')
+                hasIssues = True
+            if len(titleWithStrong) > 0:
+                print(f'There are {len(titleWithStrong)} strongs inside titles')
                 hasIssues = True
             if len(pUpper) > 0:
                 print(f'There are {len(pUpper)} uppercase p')
