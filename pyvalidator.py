@@ -8,6 +8,7 @@
 # -a	All
 
 from requests_html import HTMLSession
+import urllib
 from tqdm import tqdm
 import time
 import os
@@ -21,6 +22,7 @@ from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 import random
 from itertools import groupby
 from selenium.webdriver.firefox.options import Options
+# from PIL import ImageFile
 
 url = ''
 
@@ -32,7 +34,7 @@ while ' -' not in url:
     print('└────────────────────────────────┘')
     print('\nPaste the site URL followed by desired parameters\n')
     print('GENERAL')
-    print('-p ─────── Pagespeed (BETA)')
+    # print('-p ─────── Pagespeed (BETA)')
     print('-w ─────── W3C')
     print('-s ─────── SEO structure (Alt and Title)')
     print('-m ─────── MPI validation')
@@ -42,7 +44,7 @@ while ' -' not in url:
     print('-a ─────── Check all errors')
     print('MISC')
     print('-x ─────── Use sitemap.xml to get site links')
-    print('-u ─────── Check User Analytics')
+    # print('-u ─────── Check User Analytics')
     print('\nExample: [url] [parameter] [...]', Style.RESET_ALL)
     url = input(str('\nPaste the url here: '))
 
@@ -78,12 +80,15 @@ if vAll:
     vMobile = True
     vMisc = False
 
+vImageData = False
+
 url = url.split(' ')[0]
 if url[-1:] != '/' : url = url + '/'
 fullUrl = url
 
 def valid_url(url):
-    if '?' not in url and '#' not in url and '.jpg' not in url and '.jpeg' not in url and '.png' not in url and '.png' not in url and '.pdf' not in url and 'tel:' not in url and 'mailto:' not in url:
+    url = url.lower()
+    if '?' not in url and '#' not in url and '.jpg' not in url and '.jpeg' not in url and '.png' not in url and '.png' not in url and '.pdf' not in url and 'tel:' not in url and 'mailto:' not in url and '.mp4' not in url and '.zip' not in url and '.rar' not in url:
         return True
     else:
         return False
@@ -95,6 +100,8 @@ insideLinks = r.html.xpath('//a[not(@rel="nofollow")]/@href')
 menuTop = r.html.absolute_links
 
 hasSitemap = False
+
+imageList = []
 
 # Check robots.txt
 r = session.get(url + 'robots.txt')
@@ -165,15 +172,19 @@ if vMPI:
             articleElements = r.html.find('article h2, article p')
 
             try:
-                h1 = r.html.find('h1', first=True).text
+                h1 = r.html.find('h1')
+                if(len(h1) > 1):
+                    print('\nThere is more than 1 H1 in', link)
+                h1 = h1[0].text
             except AttributeError as aerr:
                 h1 = 'Not found'
                 continue
 
             h2HasH1 = False
-            for uniqueH2 in  h2:
+            for uniqueH2 in h2:
                 if h1 in uniqueH2.text:
                     h2HasH1 = True
+                    break
 
             emptyElements = []
             for emptyElement in articleElements:
@@ -196,13 +207,14 @@ if vMPI:
             hasIssues = False
 
             sequentialList = r.html.find('article ul + ul')
+            sequentialTitle = r.html.find('article h2 + h2')
 
             if h1.lower() not in description.lower() : 
                 print(f'Description doesn\'t have mention to H1')
                 hasIssues = True
             if h1 == 'Not found':
                 print(f'H1 not found')
-                hasIssue = True
+                hasIssues = True
             if len(pUpper) > 0:
                 print(f'There are {len(pUpper)} uppercase p')
                 hasIssues = True
@@ -213,7 +225,7 @@ if vMPI:
                 print(f'There are {len(emptyElements)} empty elements')
                 hasIssues = True
             if len(description) < 140 or len(description) > 160 : 
-                print(f'Description char count:', description)
+                print(f'Description char count:', len(description))
                 hasIssues = True
             if images < 1 :
                 print('Image count:', images)
@@ -222,8 +234,8 @@ if vMPI:
                 print('H2 count:', len(h2))
                 hasIssues = True
             if not h2HasH1:
-                print('H2 text doesn\'t have mention to H1')
-                hasIssue = True
+                print('H2 text doesn\'t have mention to H1 in')
+                hasIssues = True
             if len(pList) > 0 :
                 print('p tag as list:', len(pList))
                 # print('p tag as list:')
@@ -233,9 +245,12 @@ if vMPI:
             if len(sequentialList) > 0 :
                 print('There are', len(sequentialList),'list(s) in sequence')
                 hasIssues = True
+            if len(sequentialTitle) > 0 :
+                print('There are', len(sequentialTitle),'title(s) in sequence')
+                hasIssues = True
             if hasIssues :
                 print(link, '\n')
-            time.sleep(1)
+            #time.sleep(1)
         print('-------------- MPI Validation Finished --------------')
             
     CheckIssues(mpiLinks)
@@ -268,7 +283,10 @@ if vPagespeed:
         pagespeedUrl = pagespeedUrl.replace(':', '%3A')
         pagespeedUrl = pagespeedUrl.replace('/', '%2F')
         mobileUrl = f'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={pagespeedUrl}&category=performance&locale=pt_BR&strategy=mobile&key={apiKey}'
+        # f'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={pagespeedUrl}&fields=lighthouseResult/categories/*/score&prettyPrint=false&locale=pt_BR&strategy=mobile&&category=performance&key={apiKey}'
         desktopUrl = f'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={pagespeedUrl}&category=performance&locale=pt_BR&strategy=desktop&key={apiKey}'
+        # test = f'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={pagespeedUrl}&fields=lighthouseResult/categories/*/score&prettyPrint=false&strategy=desktop&category=performance&key={apiKey}'
+        # test = f'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={pagespeedUrl}&fields=lighthouseResult/categories/*/score&prettyPrint=false&strategy=desktop&category=performance&category=pwa&category=best-practices&category=accessibility&category=seo&key=AIzaSyDFsGExCkww5IFLzG1aAnfSovxSN-IeHE0'
 
         mobileRequest = session.get(mobileUrl)
         jsonData = json.loads(mobileRequest.text)
@@ -410,13 +428,42 @@ if vUniqueLinks:
     #os.remove('errors.txt')
 #f = open('errors.txt', 'w+')
 
+def GetImageData(imageUrl):
+    if imageUrl not in imageList:
+        imageList.append(imageUrl)
+        try:
+            if imageUrl.startswith('inc/'):
+                imageUrl = fullUrl + imageUrl
+            file = urllib.request.urlopen(imageUrl)
+            size = file.headers.get("content-length")
+            if size: size = int(size)
+            p = ImageFile.Parser()
+            while 1:
+                data = file.read(1024)
+                if not data:
+                    break
+                p.feed(data)
+                if p.image:
+                    if size != None:
+                        # return size, p.image.size
+                        return size / 1000
+                    else:
+                        return None;
+                    break
+            file.close()
+            return size, None
+        except socket_error as serr:
+            return 'Broken image [' + imageUrl + ']'
+    else:
+        return 'pass'
+
 if vW3C or vSEO or vMPI or vMobile:
 
     visitedLinks.append(url + '404')
 
-    #print(visitedLinks)
 
     for link in tqdm(visitedLinks):
+        # print(link)
         r = session.get(link)
         if vMobile:
             GetWidth(link)
@@ -435,12 +482,20 @@ if vW3C or vSEO or vMPI or vMobile:
             if h1.lower() not in description.lower() and link != fullUrl: 
                 print(f'\nDescription doesn\'t have mention to H1 in {link}')
             if len(description) < 140 or len(description) > 160 : 
-                print(f'\nDescription char count: {description} \n in {link}')
+                print(f'\nDescription char count: {len(description)} \n in {link}')
             hasNoAttrInImage = False
             hasNoAttrInLink = False
             for checkImage in allImages:
+                # if vImageData:
+                #     imageSize = GetImageData(checkImage.attrs['src'])
+                #     if(imageSize != 'pass'):
+                #         if(isinstance(imageSize, int)):
+                #             if(imageSize > 200):
+                #                 print('\nImage file size > 200KB [' + GetImageData(checkImage.attrs['src']) + 'KB] in ' + link + '\n')
+                #         elif(isinstance(imageSize, str)):
+                #             print('\n' + imageSize + '\n')
                 try:
-                    if 'escrev' in checkImage.attrs['title'].lower():
+                    if 'escrev' in checkImage.attrs['title'].lower() or checkImage.attrs['title'] == '':
                         if not hasNoAttrInImage:
                             hasNoAttrInImage = True
                             print('\n---------------- IMAGES ------------------')
@@ -451,7 +506,7 @@ if vW3C or vSEO or vMPI or vMobile:
                         print('\n---------------- IMAGES ------------------')
                     print('IMAGE WITHOUT TITLE IN\n' + link + '\n[' + checkImage.attrs['src'] + ']\n')
                 try:
-                    if 'escrev' in checkImage.attrs['alt'].lower():
+                    if 'escrev' in checkImage.attrs['alt'].lower() or checkImage.attrs['alt'] == '':
                         if not hasNoAttrInImage:
                             hasNoAttrInImage = True
                             print('\n---------------- IMAGES ------------------')
@@ -465,7 +520,7 @@ if vW3C or vSEO or vMPI or vMobile:
                     try:
                         if 'facebook' in checkLink.attrs['href'].lower():
                             continue
-                        if 'escrev' in checkLink.attrs['title'].lower():
+                        if 'escrev' in checkLink.attrs['title'].lower() or checkLink.attrs['title'] == '':
                             if not hasNoAttrInLink:
                                 hasNoAttrInLink = True
                                 print('\n---------------- LINKS ------------------')
@@ -493,7 +548,7 @@ if vW3C or vSEO or vMPI or vMobile:
                 #f.write(f'{link}\n')
             for erro in erros:
                 print(erro.text)
-            time.sleep(1)
+            #time.sleep(1)
 
     #f.close()
 if vMobile:
