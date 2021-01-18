@@ -1,11 +1,11 @@
 # Parameters
-# -p	Pagespeed
-# -w	W3C
-# -s	SEO Structure
-# -m	MPIs
-# -u	Unique Links
-# -f	Menus
-# -a	All
+# -p    Pagespeed
+# -w    W3C
+# -s    SEO Structure
+# -m    MPIs
+# -u    Unique Links
+# -f    Menus
+# -a    All
 
 from requests_html import HTMLSession
 import urllib
@@ -191,7 +191,7 @@ if vMPI:
 
             h2HasH1 = False
             for uniqueH2 in h2:
-                if h1 in uniqueH2.text:
+                if h1.lower() in uniqueH2.text.lower():
                     h2HasH1 = True
                     break
 
@@ -209,8 +209,16 @@ if vMPI:
                 hasIssues = True
 
             pAllList = []
+            descriptionInArticle = False
             for paragraph in allParagraphs:
                 pAllList.append(paragraph.text)
+                if len(description) > 30:
+                    if description[:-20].lower().strip() in paragraph.text.lower() and not descriptionInArticle:
+                        descriptionInArticle = True
+
+            if not descriptionInArticle:
+                issueMessages.append('Description not in article')
+                hasIssues = True
 
             if len(pAllList) != len(set(pAllList)):
                 issueMessages.append('There are duplicated paragraphs')
@@ -232,6 +240,12 @@ if vMPI:
             for fakePragraph in fakeParagraphs:
                 if fakePragraph.text.islower():
                     pUpper.append(fakePragraph)
+
+            pList = []
+
+            for paragraph in pAllList:
+                if paragraph[-5:] == ';':
+                    pList.append(paragraph)
                             
             pList = r.html.find('article p', containing=';')
 
@@ -272,7 +286,7 @@ if vMPI:
                 issueMessages.append(f'p tag as list: {len(pList)}')
                 # print('p tag as list:')
                 # for p in pList:
-                # 	print('[...]', p.text[-30:])
+                #   print('[...]', p.text[-30:])
                 hasIssues = True
             if len(sequentialList) > 0 :
                 issueMessages.append(f'There are {len(sequentialList)} list(s) in sequence')
@@ -306,7 +320,7 @@ if vPagespeed:
         uniqueMpi = random.choice(mpiLinks)
         if uniqueMpi not in pageSpeedLinks:
             pageSpeedLinks.append(uniqueMpi)
-	
+    
     print('-------------- PageSpeed Insights --------------')
     print('Checking PageSpeed Score...')
 
