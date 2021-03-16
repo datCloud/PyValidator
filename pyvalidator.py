@@ -1,3 +1,4 @@
+# http://mpitemporario.com.br/projetos/atar.com.br/
 # Parameters
 # -p	Pagespeed
 # -w	W3C
@@ -35,15 +36,16 @@ while ' -' not in url:
     print('\nPaste the site URL followed by desired parameters\n')
     print('GENERAL')
     # print('-p ─────── Pagespeed (BETA)')
+    print('-i ─────── ICM Mode (New)')
     print('-w ─────── W3C')
     print('-s ─────── SEO structure (Alt and Title)')
     print('-m ─────── MPI validation')
+    print('-x ─────── Use sitemap.xml to get site links (crawls faster)')
     print('-u ─────── Search for links that aren\'t in the menu')
     print('-c ─────── Compare menus')
     print('-l ─────── Check lateral scroll on mobile')
     print('-a ─────── Check all errors')
-    print('MISC')
-    print('-x ─────── Use sitemap.xml to get site links')
+    # print('MISC')
     # print('-u ─────── Check User Analytics')
     print('\nExample: [url] [parameter] [...]', Style.RESET_ALL)
     url = input(str('\nPaste the url here: '))
@@ -68,6 +70,7 @@ vMobile = True if ' -l' in url else False
 vAll = True if ' -a' in url else False
 vSitemap = True if ' -x' in url else False
 vMisc = True if ' -u' in url else False
+vICM = True if ' -i' in url else False
 vMisc = False
 
 if vAll:
@@ -78,7 +81,7 @@ if vAll:
     vUniqueLinks = True
     vMenus = True
     vMobile = True
-    vMisc = False
+    # vMisc = False
 
 vImageData = False
 
@@ -169,11 +172,12 @@ if vMPI:
             # description = len(r.html.find('head meta[name="description"]', first=True).attrs['content'])
             description = r.html.find('head meta[name="description"]', first=True).attrs['content']
             images = len(r.html.find('article ul.gallery img'))
-            h2 = r.html.find('article h2')
+            h2 = r.html.find('article.full h2') if vICM else r.html.find('article h2')
             articleElements = r.html.find('article h2, article p')
-            strongsInArticle = r.html.find('article p strong')
-            titleWithStrong = r.html.find('article h2 strong')
-            allParagraphs = r.html.find('article p')
+            articleElements = r.html.find('article.full h2, article.full p') if vICM else r.html.find('article h2, article p')
+            strongsInArticle = r.html.find('article.full p strong') if vICM else r.html.find('article p strong')
+            titleWithStrong = r.html.find('article.full h2 strong') if vICM else r.html.find('article h2 strong')
+            allParagraphs = r.html.find('article.full p') if vICM else r.html.find('article p')
 
             hasIssues = False
 
@@ -191,7 +195,7 @@ if vMPI:
 
             h2HasH1 = False
             for uniqueH2 in h2:
-                if h1 in uniqueH2.text:
+                if h1.lower() in uniqueH2.text.lower():
                     h2HasH1 = True
                     break
 
@@ -209,8 +213,16 @@ if vMPI:
                 hasIssues = True
 
             pAllList = []
+            descriptionInArticle = False
             for paragraph in allParagraphs:
                 pAllList.append(paragraph.text)
+                if len(description) > 30:
+                    if description[:-20].lower().strip() in paragraph.text.lower() and not descriptionInArticle:
+                        descriptionInArticle = True
+
+            if not descriptionInArticle:
+                issueMessages.append('Description not in article')
+                hasIssues = True
 
             if len(pAllList) != len(set(pAllList)):
                 issueMessages.append('There are duplicated paragraphs')
@@ -232,6 +244,12 @@ if vMPI:
             for fakePragraph in fakeParagraphs:
                 if fakePragraph.text.islower():
                     pUpper.append(fakePragraph)
+
+            pList = []
+
+            for paragraph in pAllList:
+                if paragraph[-5:] == ';':
+                    pList.append(paragraph)
                             
             pList = r.html.find('article p', containing=';')
 
