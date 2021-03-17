@@ -171,7 +171,7 @@ if vMPI:
                     continue
             # description = len(r.html.find('head meta[name="description"]', first=True).attrs['content'])
             description = r.html.find('head meta[name="description"]', first=True).attrs['content']
-            images = len(r.html.find('article ul.gallery img'))
+            images = len(r.html.find('.article ul.gallery img, article ul.gallery img')) if vICM else len(r.html.find('article ul.gallery img'))
             h2 = r.html.find('article.full h2') if vICM else r.html.find('article h2')
             articleElements = r.html.find('article h2, article p')
             articleElements = r.html.find('article.full h2, article.full p') if vICM else r.html.find('article h2, article p')
