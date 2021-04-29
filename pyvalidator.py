@@ -23,6 +23,7 @@ from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 import random
 from itertools import groupby
 from selenium.webdriver.firefox.options import Options
+import sys
 # from PIL import ImageFile
 
 url = ''
@@ -171,7 +172,7 @@ if vMPI:
                     continue
             # description = len(r.html.find('head meta[name="description"]', first=True).attrs['content'])
             description = r.html.find('head meta[name="description"]', first=True).attrs['content']
-            images = len(r.html.find('.article ul.gallery img, article ul.gallery img')) if vICM else len(r.html.find('article ul.gallery img'))
+            images = len(r.html.find('ul.gallery img'))
             h2 = r.html.find('article.full h2') if vICM else r.html.find('article h2')
             articleElements = r.html.find('article h2, article p')
             articleElements = r.html.find('article.full h2, article.full p') if vICM else r.html.find('article h2, article p')
@@ -263,7 +264,7 @@ if vMPI:
                 issueMessages.append(f'There are only {len(strongsInArticle)} strongs in this article')
                 hasIssues = True
             if len(titleWithStrong) > 0:
-                issueMessages.append(f'There are only {len(strongsInArticle)} strongs in this article')
+                issueMessages.append(f'There are {len(titleWithStrong)} titles with strong in this article')
                 hasIssues = True
             if len(pUpper) > 0:
                 issueMessages.append(f'There are {len(pUpper)} uppercase p')
@@ -306,6 +307,9 @@ if vMPI:
                 print('in', link)
             #time.sleep(1)
         print('-------------- MPI Validation Finished --------------')
+        if not vW3C or  not vSEO or not vMobile:
+            sys.exit('Finished')
+
             
     CheckIssues(mpiLinks)
 
