@@ -11,9 +11,9 @@ pip install selenium
 pip install requests_html
 pip install colorama
 ```
-* For this script, the Selenium runs with [Mozilla Firefox 47.0.1](https://ftp.mozilla.org/pub/firefox/releases/47.0.1/win64/pt-BR/Firefox%20Setup%2047.0.1.exe) and [Geckodriver v0.24.0](https://github.com/mozilla/geckodriver/releases/download/v0.24.0/geckodriver-v0.24.0-win64.zip)
-* Create a folder in **C:/Users/YOUR_USER/AppData/** and name it as **Geckodriver**
-* Extract the **geckodriver.exe** in the ZIP file from the step below and put it in the folder Geckodriver
+* For this script, the Selenium runs with the latest version of [Mozilla Firefox](https://www.mozilla.org/pt-BR/firefox/new/) and [Geckodriver](https://github.com/mozilla/geckodriver/releases/latest)
+* Create a folder in **C:/Users/[YOUR_USER_GOES_HERE]/AppData/** and name it as **Geckodriver**
+* Extract the **geckodriver.exe** from the ZIP file and put it in the Geckodriver folder
 
 ![Example Geckodriver directory path](/images/example-01.png)
 
@@ -24,3 +24,5 @@ setx path "%path%;C:\Users\YOUR_USER\AppData\Local\Geckodriver"
 * This command will set the Geckodriver directory in your environment variables
 * Restart your computer
 * Test the script
+
+### If you have any issue, please let me know :)
