@@ -175,10 +175,10 @@ if vMPI:
             images = len(r.html.find('ul.gallery img'))
             h2 = r.html.find('article.full h2') if vICM else r.html.find('article h2')
             articleElements = r.html.find('article h2, article p')
-            articleElements = r.html.find('article.full h2, article.full p') if vICM else r.html.find('article h2, article p')
+            articleElements = r.html.find('article.full h2, article.full p, article.full li') if vICM else r.html.find('article h2, article p, article p')
             strongsInArticle = r.html.find('article.full p strong') if vICM else r.html.find('article p strong')
             titleWithStrong = r.html.find('article.full h2 strong') if vICM else r.html.find('article h2 strong')
-            allParagraphs = r.html.find('article.full p') if vICM else r.html.find('article p')
+            allParagraphs = r.html.find('article.full p, article.full li') if vICM else r.html.find('article p, article p')
 
             hasIssues = False
 
