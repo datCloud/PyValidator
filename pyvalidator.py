@@ -1,3 +1,7 @@
+# TODO
+# Ask to use sitemap.xml case exists
+# Create local sitemap to use on the next validation
+
 # http://mpitemporario.com.br/projetos/atar.com.br/
 # Parameters
 # -p	Pagespeed
@@ -544,36 +548,36 @@ if vW3C or vSEO or vMPI or vMobile:
             hasNoAttrInImage = False
             hasNoAttrInLink = False
             for checkImage in allImages:
-                # if vImageData:
-                #     imageSize = GetImageData(checkImage.attrs['src'])
-                #     if(imageSize != 'pass'):
-                #         if(isinstance(imageSize, int)):
-                #             if(imageSize > 200):
-                #                 print('\nImage file size > 200KB [' + GetImageData(checkImage.attrs['src']) + 'KB] in ' + link + '\n')
-                #         elif(isinstance(imageSize, str)):
-                #             print('\n' + imageSize + '\n')
+                currentImageSrc = False
+                try:
+                    currentImageSrc = checkImage.attrs['src']
+                except KeyError as err:
+                    if not hasNoAttrInImage:
+                        hasNoAttrInImage = True
+                        print('\n---------------- IMAGES ------------------')
+                    print('IMAGE WITHOUT SRC IN\n' + link + '\n[' + checkImage.html + ']\n')
                 try:
                     if 'escrev' in checkImage.attrs['title'].lower() or checkImage.attrs['title'] == '':
                         if not hasNoAttrInImage:
                             hasNoAttrInImage = True
                             print('\n---------------- IMAGES ------------------')
-                        print('WRONG TITLE IN\n' + link + '\n[' + checkImage.attrs['src'] + ']\n')
+                        print('WRONG TITLE IN\n' + link + '\n[' + (checkImage.attrs['src'] if currentImageSrc else checkImage.html) + ']\n')
                 except KeyError as err:
                     if not hasNoAttrInImage:
                         hasNoAttrInImage = True
                         print('\n---------------- IMAGES ------------------')
-                    print('IMAGE WITHOUT TITLE IN\n' + link + '\n[' + checkImage.attrs['src'] + ']\n')
+                    print('IMAGE WITHOUT TITLE IN\n' + link + '\n[' + (checkImage.attrs['src'] if currentImageSrc else checkImage.html) + ']\n')
                 try:
-                    if 'escrev' in checkImage.attrs['alt'].lower() or checkImage.attrs['alt'] == '':
+                    if 'escrev' in checkImage.attrs['alt'].lower() or checkImage.attrs['alt'] == checkImage.html:
                         if not hasNoAttrInImage:
                             hasNoAttrInImage = True
                             print('\n---------------- IMAGES ------------------')
-                        print('WRONG ALT IN\n' + link + '\n[' + checkImage.attrs['src'] + ']\n')
+                        print('WRONG ALT IN\n' + link + '\n[' + (checkImage.attrs['src'] if currentImageSrc else checkImage.html) + ']\n')
                 except KeyError as err:
                     if not hasNoAttrInImage:
                         hasNoAttrInImage = True
                         print('\n---------------- IMAGES ------------------')
-                    print('IMAGE WITHOUT ALT IN\n' + link + '\n[' + checkImage.attrs['src'] + ']\n')
+                    print('IMAGE WITHOUT ALT IN\n' + link + '\n[' + (checkImage.attrs['src'] if currentImageSrc else checkImage.html) + ']\n')
             for checkLink in allLinks:
                     try:
                         if 'facebook' in checkLink.attrs['href'].lower():
