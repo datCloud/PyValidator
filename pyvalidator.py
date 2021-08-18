@@ -235,7 +235,7 @@ if vMPI:
 
             emptyElements = []
             for emptyElement in articleElements:
-                if len(emptyElement.text) < 6:
+                if len(emptyElement.text.strip()) < 2:
                     emptyElements.append(emptyElement)
 
             fakeTitles = r.html.find('article p')
