@@ -267,9 +267,9 @@ if vMPI:
             if len(strongsInArticle) < 3:
                 issueMessages.append(f'There are only {len(strongsInArticle)} strongs in this article')
                 hasIssues = True
-            if len(titleWithStrong) > 0:
-                issueMessages.append(f'There are {len(titleWithStrong)} titles with strong in this article')
-                hasIssues = True
+            #if len(titleWithStrong) > 0:
+                #issueMessages.append(f'There are {len(titleWithStrong)} titles with strong in this article')
+                #hasIssues = True
             if len(pUpper) > 0:
                 issueMessages.append(f'There are {len(pUpper)} uppercase p')
                 hasIssues = True
