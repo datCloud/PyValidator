@@ -180,7 +180,7 @@ if vMPI:
             h2 = r.html.find('article.full h2') if vICM else r.html.find('article h2')
             articleElements = r.html.find('article h2, article p')
             articleElements = r.html.find('article.full h2, article.full p, article.full li') if vICM else r.html.find('article h2, article p, article p')
-            strongsInArticle = r.html.find('article.full p strong') if vICM else r.html.find('article p strong')
+            strongsInArticle = r.html.find('article.full strong') if vICM else r.html.find('article p strong')
             titleWithStrong = r.html.find('article.full h2 strong') if vICM else r.html.find('article h2 strong')
             allParagraphs = r.html.find('article.full p, article.full li') if vICM else r.html.find('article p, article p')
 
