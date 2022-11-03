@@ -381,7 +381,8 @@ def site_urls(insideLinks, counter, hasSitemap):
         sitemapLinks = sitemapResquest.html.find('loc')
         if len(sitemapLinks) > 0:
             for sitemapItem in sitemapLinks:
-                visitedLinks.append(sitemapItem.text)
+                if '.pdf' not in sitemapItem.text:
+                    visitedLinks.append(sitemapItem.text)
             sitemapLinks = visitedLinks
             if url + '404' in visitedLinks:
                 print('Found 404 link in sitemap.xml')
