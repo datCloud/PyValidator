@@ -133,7 +133,11 @@ if vMobile or vMisc:
     # driver_options.add_argument("--no-sandbox")
     driver_options.add_argument("--log-level=3")
     driver_options.add_argument("--disable-gpu")
-    driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()), options=driver_options, service_log_path = os.devnull)
+    try:
+        driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()), options=driver_options)
+    except:
+        driver_options.binary_location = os.path.join(os.path.expanduser('~'), r'AppData\Local\Mozilla Firefox\firefox.exe')
+        driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()), options=driver_options)
     driver.set_window_position(0, 0)
     driver.set_window_size(350, 568)
 
