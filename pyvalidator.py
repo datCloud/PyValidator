@@ -1,17 +1,3 @@
-# TODO
-# Ask to use sitemap.xml case exists
-# Create local sitemap to use on the next validation
-
-# http://mpitemporario.com.br/projetos/atar.com.br/
-# Parameters
-# -p	Pagespeed
-# -w	W3C
-# -s	SEO Structure
-# -m	MPIs
-# -u	Unique Links
-# -f	Menus
-# -a	All
-
 from requests_html import HTMLSession
 import urllib
 from tqdm import tqdm
@@ -23,32 +9,57 @@ from socket import error as socket_error
 import json
 from colorama import Fore, Style
 from selenium import webdriver
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 import random
-from itertools import groupby
 from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.firefox.service import Service
+from webdriver_manager.firefox import GeckoDriverManager
 import sys
-# from PIL import ImageFile
+import base64
+from pyfiglet import Figlet
+
+def CheckGHToken():
+    try:
+        userDataFile = open(os.path.join(currentDirectory, 'user.auth'), 'r', encoding='utf-8')
+        userDataList = []
+
+        for line in userDataFile:
+            userDataList.append(line)
+
+        ghToken = base64.b64decode(userDataList[0]).decode()
+    except:
+        print(f'{Fore.YELLOW}In order to use this tool you need to enter a valid personal token for GitHub API.\nFor more info access {Style.RESET_ALL}https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token#creating-a-fine-grained-personal-access-token\n')
+        ghToken = input('Enter your GH_TOKEN: ')
+
+        userDataFile = open(os.path.join(currentDirectory, 'user.auth'), 'w+', encoding='utf-8')
+        userDataFile.write(f'{base64.b64encode(ghToken.encode()).decode()}')
+        userDataFile.close()
+
+    return ghToken
+
+currentDirectory = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+os.environ['GH_TOKEN'] = CheckGHToken()
+
+f = Figlet(font='slant')
 
 url = ''
 
 while ' -' not in url:
-    print('\033c')
+    os.system('clear')
     print(Fore.YELLOW)
+    print(f.renderText('PyValidator'))
+    print(f'(by datCloud)\n')
     print('┌────────────────────────────────┐')
     print('│          INSTRUCTIONS          │')
     print('└────────────────────────────────┘')
     print('\nPaste the site URL followed by desired parameters\n')
-    print('GENERAL')
-    # print('-p ─────── Pagespeed (BETA)')
-    print('-i ─────── ICM Mode (New)')
-    print('-w ─────── W3C')
-    print('-s ─────── SEO structure (Alt and Title)')
-    print('-m ─────── MPI validation')
-    print('-x ─────── Use sitemap.xml to get site links (crawls faster)')
-    print('-u ─────── Search for links that aren\'t in the menu')
-    print('-c ─────── Compare menus')
+    print('-w ─────── W3C issues (Powered by w3c.org)')
+    print('-s ─────── SEO structure for Alt and Title attributes')
+    print('-m ─────── Check MPI model and validade all MPIs ')
     print('-l ─────── Check lateral scroll on mobile')
+    print('-x ─────── Use sitemap.xml to get site links (crawls faster)')
+    print('-p ─────── Pagespeed score for the home page')
+    print('-u ─────── Search for links that aren\'t in the menu')
+    print('-c ─────── Compare top and footer menus (Old websites)')
     print('-a ─────── Check all errors')
     # print('MISC')
     # print('-u ─────── Check User Analytics')
@@ -62,9 +73,6 @@ def main_url(cleanUrl):
 
 root = main_url(url)
 
-# currentDirectory = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-# keywordsFile = open(os.path.join(currentDirectory, 'keywords.txt'), 'r')
-
 vPagespeed = True if ' -p' in url else False
 vW3C = True if ' -w' in url else False
 vSEO = True if ' -s' in url else False
@@ -75,7 +83,6 @@ vMobile = True if ' -l' in url else False
 vAll = True if ' -a' in url else False
 vSitemap = True if ' -x' in url else False
 vMisc = True if ' -u' in url else False
-vICM = True if ' -i' in url else False
 vMisc = False
 
 if vAll:
@@ -121,14 +128,12 @@ else:
 
 if vMobile or vMisc:
 
-    # binary = r'C:\Program Files\Mozilla Firefox\firefox.exe'
-    options = Options()
-    options.add_argument('--headless')
-    # options.binary = binary
-    # cap = DesiredCapabilities().FIREFOX
-    # cap["marionette"] = False
-    # driver = webdriver.Firefox(options=options, capabilities=cap, executable_path="%USERPROFILE%\\AppData\\Local\\Geckodriver\\geckodriver.exe")
-    driver = webdriver.Firefox(options=options)
+    driver_options = webdriver.FirefoxOptions()
+    driver_options.add_argument("--headless")
+    # driver_options.add_argument("--no-sandbox")
+    driver_options.add_argument("--log-level=3")
+    driver_options.add_argument("--disable-gpu")
+    driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()), options=driver_options, service_log_path = os.devnull)
     driver.set_window_position(0, 0)
     driver.set_window_size(350, 568)
 
@@ -143,9 +148,23 @@ def GetWidth(pageUrl):
     documentWidth = driver.execute_script('return document.body.scrollWidth')
     if windowWidth < documentWidth:
         print('\n------------- LATERAL SCROLL -------------\n')
-        print(pageUrl)
+        print(f'W: {windowWidth}\nC: {documentWidth}\n\t{pageUrl}')
         print('Page content larger than window')
         print('\n----------- END LATERAL SCROLL -----------\n')
+
+def checkDuplicatedMPI(mpiLinks):
+    allMPILinks = set()
+    duplicatedMPILinks = [x for x in mpiLinks if x in allMPILinks or allMPILinks.add(x)]
+    if duplicatedMPILinks:
+        print('\nDuplicated MPIs:')
+        for duplicatedMPI in duplicatedMPILinks:
+            print(f'\t{duplicatedMPI}')
+        print(f'\n')
+        return duplicatedMPILinks
+    return False
+
+def isICM(response, mpiLink):
+    return True if response.html.find('body.mpi-rules', first = True) else False
 
 
 mpiBaseLink = (url + 'mapa-site') if url[-1:] == '/' else (url + '/mapa-site')
@@ -158,31 +177,36 @@ for content in subMenuInfo:
 if vMPI:
     print('-------------- MPI Validation --------------')
     
-    for key, item in groupby(mpiLinks):
-        frequency = list(item)
-        if(len(frequency) > 1):
-            print(f'Duplicated MPI: {frequency[0]} - {len(frequency)}') 
+    checkDuplicatedMPI(mpiLinks)
 
     def CheckIssues(mpiLinks):
         issueUrls = []
+        mpiStyle = None
         for link in tqdm(mpiLinks):
-            w3cLink = f"{link}"
             issueMessages = []
             try:
-                r = session.get(w3cLink)
+                r = session.get(link)
             except socket_error as serr:
                 if serr.errno == errno.ECONNREFUSED:
                     print('Link inválido:', link, serr)
                     continue
-            # description = len(r.html.find('head meta[name="description"]', first=True).attrs['content'])
+            if mpiStyle is None:
+                mpiStyle = isICM(r, mpiLinks[0])
+
             description = r.html.find('head meta[name="description"]', first=True).attrs['content']
             images = len(r.html.find('ul.gallery img'))
-            h2 = r.html.find('article.full h2') if vICM else r.html.find('article h2')
-            articleElements = r.html.find('article h2, article p')
-            articleElements = r.html.find('article.full h2, article.full p, article.full li') if vICM else r.html.find('article h2, article p, article p')
-            strongsInArticle = r.html.find('article.full strong') if vICM else r.html.find('article p strong')
-            titleWithStrong = r.html.find('article.full h2 strong') if vICM else r.html.find('article h2 strong')
-            allParagraphs = r.html.find('article.full p, article.full li') if vICM else r.html.find('article p, article p')
+            if mpiStyle:
+                h2 = r.html.find('article:first h2')
+                articleElements = r.html.find('article:first h2, article:first p, article:first ul.list li')
+                strongsInArticle = r.html.find('article:first p strong')
+                titleWithStrong = r.html.find('article:first h2 strong')
+                allParagraphs = r.html.find('article:first p, article:first ul.list li')
+            else:
+                h2 = r.html.find('article h2')
+                articleElements = r.html.find('article h2, article p, article ul.list li')
+                strongsInArticle = r.html.find('article strong')
+                titleWithStrong = r.html.find('article h2 strong')
+                allParagraphs = r.html.find('article p, article ul.list li')
 
             hasIssues = False
 
@@ -220,16 +244,17 @@ if vMPI:
             pAllList = []
             descriptionInArticle = False
             for paragraph in allParagraphs:
-                pAllList.append(paragraph.text)
-                if len(description) > 30:
-                    if description[:-20].lower().strip() in paragraph.text.lower() and not descriptionInArticle:
-                        descriptionInArticle = True
+                if paragraph.text != '':
+                    if len(description) > 30:
+                        if description[:-20].lower().strip() in paragraph.text.lower() and not descriptionInArticle:
+                            descriptionInArticle = True
 
             if not descriptionInArticle:
                 issueMessages.append('Description not in article')
                 hasIssues = True
 
             if len(pAllList) != len(set(pAllList)):
+                print(pAllList)
                 issueMessages.append('There are duplicated paragraphs')
                 hasIssues = True
 
@@ -250,16 +275,8 @@ if vMPI:
                 if fakePragraph.text.islower():
                     pUpper.append(fakePragraph)
 
-            pList = []
-
-            for paragraph in pAllList:
-                if paragraph[-5:] == ';':
-                    pList.append(paragraph)
-                            
-            pList = r.html.find('article p', containing=';')
-
             sequentialList = r.html.find('article ul + ul')
-            sequentialTitle = r.html.find('article h2 + h2')
+            sequentialTitle = r.html.find('article:first h2 + h2')
 
             if h1.lower() not in description.lower() : 
                 issueMessages.append('Description doesn\'t have mention to H1')
@@ -267,9 +284,9 @@ if vMPI:
             if len(strongsInArticle) < 3:
                 issueMessages.append(f'There are only {len(strongsInArticle)} strongs in this article')
                 hasIssues = True
-            #if len(titleWithStrong) > 0:
-                #issueMessages.append(f'There are {len(titleWithStrong)} titles with strong in this article')
-                #hasIssues = True
+            if len(titleWithStrong) > 0:
+                issueMessages.append(f'There are {len(titleWithStrong)} titles with strong in this article')
+                hasIssues = True
             if len(pUpper) > 0:
                 issueMessages.append(f'There are {len(pUpper)} uppercase p')
                 hasIssues = True
@@ -291,12 +308,6 @@ if vMPI:
             if not h2HasH1:
                 issueMessages.append(f'H2 text doesn\'t have mention to H1 in')
                 hasIssues = True
-            if len(pList) > 0 :
-                issueMessages.append(f'p tag as list: {len(pList)}')
-                # print('p tag as list:')
-                # for p in pList:
-                # 	print('[...]', p.text[-30:])
-                hasIssues = True
             if len(sequentialList) > 0 :
                 issueMessages.append(f'There are {len(sequentialList)} list(s) in sequence')
                 hasIssues = True
@@ -309,12 +320,10 @@ if vMPI:
                     print(issue)
 
                 print('in', link)
-            #time.sleep(1)
         print('-------------- MPI Validation Finished --------------')
-        if not vW3C or  not vSEO or not vMobile:
+        if not vW3C and not vSEO and not vMobile:
             sys.exit('Finished')
-
-            
+      
     CheckIssues(mpiLinks)
 
 links = []
@@ -332,7 +341,7 @@ if vPagespeed:
         uniqueMpi = random.choice(mpiLinks)
         if uniqueMpi not in pageSpeedLinks:
             pageSpeedLinks.append(uniqueMpi)
-	
+    
     print('-------------- PageSpeed Insights --------------')
     print('Checking PageSpeed Score...')
 
@@ -345,10 +354,7 @@ if vPagespeed:
         pagespeedUrl = pagespeedUrl.replace(':', '%3A')
         pagespeedUrl = pagespeedUrl.replace('/', '%2F')
         mobileUrl = f'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={pagespeedUrl}&category=performance&locale=pt_BR&strategy=mobile&key={apiKey}'
-        # f'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={pagespeedUrl}&fields=lighthouseResult/categories/*/score&prettyPrint=false&locale=pt_BR&strategy=mobile&&category=performance&key={apiKey}'
         desktopUrl = f'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={pagespeedUrl}&category=performance&locale=pt_BR&strategy=desktop&key={apiKey}'
-        # test = f'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={pagespeedUrl}&fields=lighthouseResult/categories/*/score&prettyPrint=false&strategy=desktop&category=performance&key={apiKey}'
-        # test = f'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={pagespeedUrl}&fields=lighthouseResult/categories/*/score&prettyPrint=false&strategy=desktop&category=performance&category=pwa&category=best-practices&category=accessibility&category=seo&key=AIzaSyDFsGExCkww5IFLzG1aAnfSovxSN-IeHE0'
 
         mobileRequest = session.get(mobileUrl)
         jsonData = json.loads(mobileRequest.text)
@@ -363,22 +369,6 @@ if vPagespeed:
 
     for pageSpeedLink in pageSpeedLinks:
         PageSpeed(pageSpeedLink, apiKey)
-        
-    #pagespeedUrl = url
-    #filterThirdPartyResouces = True
-    #locale = 'pt_BR'
-    #screenshot = False
-    #category = 'performance'
-
-    #filterThirdPartyResouces = str(filterThirdPartyResouces).lower()
-    #screenshot = str(screenshot).lower()
-
-    # v2
-    # url = f'https://www.googleapis.com/pagespeedonline/v2/runPagespeed?url={url}/&filter_third_party_resources={filterThirdPartyResouces}&screenshot={screenshot}&strategy={strategy}&key={apiKey}'
-
-    # v5
-    #desktopUrl = f'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={url}&category={category}&locale={locale}&strategy=desktop&key={apiKey}'
-    #mobileUrl = f'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={url}&category={category}&locale={locale}&strategy=mobile&key={apiKey}'
 
 def site_urls(insideLinks, counter, hasSitemap):
     if vSitemap:
@@ -406,8 +396,6 @@ def site_urls(insideLinks, counter, hasSitemap):
                 counter += 1
             else:
                 counter = 0
-            # print('\033c')
-            # print('Getting links ', loader[counter])
             if link[-1:] == '/' and link != fullUrl : continue
             if 'orcamento' in link: continue
             visitedLinks.append(link)
@@ -423,7 +411,6 @@ def CheckForUniqueLinks(uniqueLinks):
     for sitemapElement in sitemapElements:
         sitemapLinks.append(sitemapElement.attrs['href'])
     for uniqueLink in uniqueLinks:
-        # if uniqueLink not in sitemapLinks and uniqueLink not in (url + 'carrinho') and uniqueLink not in (url + 'mapa-sitea'):
         if uniqueLink not in sitemapLinks and '/mapa-site' not in uniqueLink and '/carrinho' not in uniqueLink:
             unlistedLinks.append(uniqueLink)
     if(len(unlistedLinks) > 0):
@@ -432,7 +419,7 @@ def CheckForUniqueLinks(uniqueLinks):
             print(unlistedLink)
         print('------------------------')
 
-if vW3C or vSEO or vMPI or vMobile:
+if vW3C or vSEO or vMobile:
     site_urls(insideLinks, count, hasSitemap)
 
 def CompareMenus():
@@ -447,9 +434,6 @@ def CompareMenus():
     for menuFooterLink in menuFooter:
         menuFooterLinks.append(menuFooterLink.attrs['href'])
     menuTopLinks.append(url + 'mapa-site')
-
-    # print(menuTopLinks)
-    # print(menuFooterLinks)
 
     print('-' * 10 + ' COMPARING MENUS ' + '-' * 10)
 
@@ -468,9 +452,6 @@ def CompareMenus():
     for menuFooterText in menuFooter:
         menuFooterTexts.append(menuFooterText.text.lower())
     menuTopTexts.append('Mapa do site'.lower())
-    
-    # print(menuTopTexts)
-    # print(menuFooterTexts)
 
     print('Comparsion texts of header\'s menu and footer\'s menu')
 
@@ -486,46 +467,11 @@ if vMenus:
 if vUniqueLinks:
     CheckForUniqueLinks(visitedLinks)
 
-#if os.path.exists('errors.txt'):
-    #os.remove('errors.txt')
-#f = open('errors.txt', 'w+')
-
-def GetImageData(imageUrl):
-    if imageUrl not in imageList:
-        imageList.append(imageUrl)
-        try:
-            if imageUrl.startswith('inc/'):
-                imageUrl = fullUrl + imageUrl
-            file = urllib.request.urlopen(imageUrl)
-            size = file.headers.get("content-length")
-            if size: size = int(size)
-            p = ImageFile.Parser()
-            while 1:
-                data = file.read(1024)
-                if not data:
-                    break
-                p.feed(data)
-                if p.image:
-                    if size != None:
-                        # return size, p.image.size
-                        return size / 1000
-                    else:
-                        return None;
-                    break
-            file.close()
-            return size, None
-        except socket_error as serr:
-            return 'Broken image [' + imageUrl + ']'
-    else:
-        return 'pass'
-
-if vW3C or vSEO or vMPI or vMobile:
+if vW3C or vSEO or vMobile:
 
     visitedLinks.append(url + '404')
 
-
     for link in tqdm(visitedLinks):
-        # print(link)
         r = session.get(link)
         if vMobile:
             GetWidth(link)
@@ -594,25 +540,25 @@ if vW3C or vSEO or vMPI or vMobile:
                         print(f'LINK WITHOUT TITLE IN {link} --- [' + checkLink.attrs['href'] + ']'+'\n')
         if vW3C:
             hasW3CError = False
-            w3cLink = f"https://validator.w3.org/nu/?doc={link}"
+            w3cLink = f"https://validator.nu/?doc={link}"
             try:
                 r = session.get(w3cLink)
             except socket_error as serr:
                 if serr.errno == errno.ECONNREFUSED:
                     print('Invalid or broken link:', link, serr)
                     continue
-            erros = r.html.find('#results strong')
-            if erros:
+            w3cErrors = r.html.find('#results strong')
+            if w3cErrors:
                 if not hasW3CError:
                     hasW3CError = True
                     print('\n---------------- W3C ------------------')
-                print(link)
-                #f.write(f'{link}\n')
-            for erro in erros:
-                print(erro.text)
-            #time.sleep(1)
+                print(w3cLink)
+                errorList = []
+                [errorList.append(i.text) for i in w3cErrors]
+                errorList = {e:errorList.count(e) for e in errorList}
+                for key, value in errorList.items():
+                    print(f'{key}: {value}')
 
-    #f.close()
 if vMobile:
     driver.close()
     driver.quit()
