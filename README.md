@@ -13,6 +13,7 @@ pip install requests_html
 pip install colorama
 pip install tqdm
 pip install webdriver_manager
+pip install pyfiglet
 ```
 ### Install Mozilla Firefox
 This tool uses Mozilla Firefox browser with Selenium for Mobile validation
