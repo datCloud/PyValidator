@@ -41,6 +41,8 @@ os.environ['GH_TOKEN'] = CheckGHToken()
 
 f = Figlet(font='slant')
 
+ignoreLinksWith = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '?', '#', '.pdf', 'tel:', 'mailto:', '.mp4', '.webm', '.zip', '.rar', '.exe', '.xls', '.xls', '.doc']
+
 url = ''
 
 while ' -' not in url:
@@ -103,11 +105,7 @@ fullUrl = url
 
 def valid_url(url):
     url = url.lower()
-    if '?' not in url and '#' not in url and '.jpg' not in url and '.jpeg' not in url and '.png' not in url and '.png' not in url and '.pdf' not in url and 'tel:' not in url and 'mailto:' not in url and '.mp4' not in url and '.zip' not in url and '.rar' not in url:
-        return True
-    else:
-        return False
-
+    return True if any(ext in url for ext in ignoreLinksWith) else False
 
 session = HTMLSession()
 r = session.get(url)
