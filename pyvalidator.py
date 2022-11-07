@@ -105,7 +105,7 @@ fullUrl = url
 
 def valid_url(url):
     url = url.lower()
-    return True if any(ext in url for ext in ignoreLinksWith) else False
+    return False if any(ext in url for ext in ignoreLinksWith) else True
 
 session = HTMLSession()
 r = session.get(url)
@@ -473,7 +473,6 @@ if vUniqueLinks:
 if vW3C or vSEO or vMobile:
 
     visitedLinks.append(url + '404')
-
     for link in tqdm(visitedLinks):
         r = session.get(link)
         if vMobile:
