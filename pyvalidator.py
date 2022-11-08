@@ -16,6 +16,7 @@ from webdriver_manager.firefox import GeckoDriverManager
 import sys
 import base64
 from pyfiglet import Figlet
+import re
 
 def CheckGHToken():
     try:
@@ -372,6 +373,10 @@ if vPagespeed:
     for pageSpeedLink in pageSpeedLinks:
         PageSpeed(pageSpeedLink, apiKey)
 
+def sitemapToCurrentUrl(link, baseUrl):
+    regexSintax = re.compile('(http(s?):\/\/.*?\/)')
+    return regexSintax.sub(baseUrl, link)
+
 def site_urls(insideLinks, counter, hasSitemap):
     if vSitemap:
         sitemapUrl = url + 'sitemap.xml'
@@ -380,7 +385,7 @@ def site_urls(insideLinks, counter, hasSitemap):
         if len(sitemapLinks) > 0:
             for sitemapItem in sitemapLinks:
                 if '.pdf' not in sitemapItem.text:
-                    visitedLinks.append(sitemapItem.text)
+                    visitedLinks.append(sitemapToCurrentUrl(sitemapItem.text, fullUrl))
             sitemapLinks = visitedLinks
             if url + '404' in visitedLinks:
                 print('Found 404 link in sitemap.xml')
