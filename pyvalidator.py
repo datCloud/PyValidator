@@ -195,6 +195,9 @@ if vMPI:
                     continue
             if mpiStyle is None:
                 mpiStyle = isICM(r, mpiLinks[0])
+                
+            mpiElement = r.html.find('ul.thumbnails, .card, .card--mpi', first = True)
+            if mpiElement: continue
 
             description = r.html.find('head meta[name="description"]', first=True).attrs['content']
             images = len(r.html.find('ul.gallery img'))
