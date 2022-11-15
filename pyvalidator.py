@@ -483,6 +483,10 @@ if vW3C or vSEO or vMobile:
     visitedLinks.append(url + '404')
     for link in tqdm(visitedLinks):
         r = session.get(link)
+        code = r.status_code
+        if code != 200:
+             print(f'\n\n{Back.RED}Link redirects to {code}:{Style.RESET_ALL} {link}\n')
+             continue
         if vMobile:
             GetWidth(link)
         if vSEO:
