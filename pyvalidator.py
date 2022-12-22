@@ -204,7 +204,7 @@ if vMPI:
             if mpiStyle:
                 h2 = r.html.find('article:first h2')
                 articleElements = r.html.find('article:first h2, article:first p, article:first ul.list li')
-                strongsInArticle = r.html.find('article:first p strong')
+                strongsInArticle = r.html.find('article:first strong')
                 titleWithStrong = r.html.find('article:first h2 strong')
                 allParagraphs = r.html.find('article:first p, article:first ul.list li')
             else:
