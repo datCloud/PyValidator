@@ -287,6 +287,9 @@ if vMPI:
             if h1.lower() not in description.lower() : 
                 issueMessages.append('Description doesn\'t have mention to H1')
                 hasIssues = True
+            elif description.lower().find(h1.lower()) > 19:
+                issueMessages.append('H1 not in first 20 chars of description')
+                hasIssues = True
             if len(strongsInArticle) < 3:
                 issueMessages.append(f'There are only {len(strongsInArticle)} strongs in this article')
                 hasIssues = True
