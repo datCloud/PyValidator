@@ -1,0 +1,11 @@
+colorama==0.4.4
+GitPython==3.1.30
+psutil==5.9.4
+pyfiglet==0.8.post1
+pyngrok==5.1.0
+requests==2.27.1
+requests_html==0.10.0
+selenium==4.7.2
+tqdm==4.64.0
+webdriver_manager==3.7.0
+xmltodict==0.13.0
