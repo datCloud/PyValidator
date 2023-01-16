@@ -620,7 +620,6 @@ try:
                 if 'escrev' in checkLink.attrs['title'].lower() or checkLink.attrs['title'] == '':
                     print(f'{Fore.YELLOW}Link with wrong title in: {Style.RESET_ALL}{link} \n{checkLink.attrs["href"]}\n')
             except KeyError as err:
-                print(checkLink.html)
                 print(f'{Fore.YELLOW}Link without title in {Style.RESET_ALL}{link} \n{checkLink.attrs["href"]}\n')
 
     # MPI
