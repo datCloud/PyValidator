@@ -166,7 +166,6 @@ try:
                 hasErrors = True
                 print(f'\n{Fore.YELLOW}W3C Issues in{Style.RESET_ALL} {url if  baseUrl in url else url.replace(ngrokUrl, baseUrl)}')
             print(f'{key.title()}: {value}')
-            input('Vê lá o negoçu')
 
     def GetUrl(urlInput):
         urlInput = urlInput.split(' ')[0]
