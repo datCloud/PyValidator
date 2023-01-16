@@ -1,2 +1,5 @@
 user.auth
 geckodriver.log
+__pycache__/
+audit.json
+links.txt
