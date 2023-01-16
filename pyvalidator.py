@@ -46,6 +46,8 @@ def KillNgrok():
         return False
 
 try:
+    
+    RepoIsUpToDate()
 
     notForRobots = ['mpitemporario', 'localhost', 'ngrok.io']
 
