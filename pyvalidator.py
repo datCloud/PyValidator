@@ -32,7 +32,7 @@ def RepoIsUpToDate():
     count_behind = sum(1 for c in commits_behind)
 
     if(count_behind > 0):
-        print(f'{Fore.YELLOW}There are new commits on remote repository\nTo continue using PyValidator you need to upated it{Style.RESET_ALL}')
+        print(f'{Fore.YELLOW}There are new commits on remote repository\nTo continue using PyValidator you need to updated it{Style.RESET_ALL}')
         quit()
 
 def KillNgrok():
