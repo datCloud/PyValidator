@@ -123,22 +123,22 @@ try:
         print(Fore.YELLOW)
         print(f.renderText('PyValidator'))
         print(f'(by datCloud)\n')
-        print('┌────────────────────────────────┐')
-        print('│          INSTRUCTIONS          │')
-        print('└────────────────────────────────┘')
+        print('----------------------------------')
+        print('|          INSTRUCTIONS          |')
+        print('----------------------------------')
         print('\nPaste the site URL followed by desired parameters\n')
-        print('-w ─────── W3C issues (Powered by w3c.org)')
-        print('-s ─────── SEO structure for Alt and Title attributes')
-        print('-m ─────── Check MPI model and validade all MPIs ')
-        print('-l ─────── Check lateral scroll on mobile')
-        print('-x ─────── Use sitemap.xml to get site links (crawls faster)')
-        print('-p ─────── Pagespeed score for the home page')
-        print('-u ─────── Search for links that aren\'t in the menu')
-        print('-c ─────── Compare top and footer menus (Old websites)')
-        print('-a ─────── Check all errors')
-        # print('-d ─────── Debug Mode')
+        print('-w ------- W3C issues (Powered by w3c.org)')
+        print('-s ------- SEO structure for Alt and Title attributes')
+        print('-m ------- Check MPI model and validade all MPIs ')
+        print('-l ------- Check lateral scroll on mobile')
+        print('-x ------- Use sitemap.xml to get site links (crawls faster)')
+        print('-p ------- Pagespeed score for the home page')
+        print('-u ------- Search for links that aren\'t in the menu')
+        print('-c ------- Compare top and footer menus (Old websites)')
+        print('-a ------- Check all errors')
+        # print('-d ------- Debug Mode')
         # print('MISC')
-        # print('-u ─────── Check User Analytics')
+        # print('-u ------- Check User Analytics')
         print('\nExample: [url] [parameter] [...]', Style.RESET_ALL)
         tries += 1
         if tries > 2: print(f'\n{Back.RED} TRY SOMETHING LIKE THIS, BRO ¬¬ \n https://domain.com.br/ -w -s {Style.RESET_ALL}')
@@ -595,7 +595,7 @@ try:
 
         description = r.html.find('head meta[name="description"]', first=True).attrs['content'] 
 
-        if h1.lower() not in description.lower() and link != baseUrl: 
+        if h1.lower() not in description.lower() and link != url: 
             print(f'\nDescription doesn\'t have mention to H1 in {link}')
         if len(description) < 140 or len(description) > 160 : 
             print(f'\nDescription char count: {len(description)} \n in {link}')
