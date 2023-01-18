@@ -17,7 +17,7 @@ import base64
 from pyfiglet import Figlet
 import re
 from pyngrok import ngrok
-import psutil
+#import psutil
 
 import requests
 import xmltodict
@@ -36,14 +36,15 @@ def RepoIsUpToDate():
         quit()
 
 def KillNgrok():
-    try:
-        for proc in psutil.process_iter():
-            if proc.name() == 'ngrok.exe':
-                proc.kill()
-                break
-            return True
-    except:
-        return False
+    return False
+    # try:
+    #     for proc in psutil.process_iter():
+    #         if proc.name() == 'ngrok.exe':
+    #             proc.kill()
+    #             break
+    #         return True
+    # except:
+    #     return False
 
 try:
     
