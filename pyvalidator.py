@@ -677,7 +677,6 @@ try:
         try:
             with open(os.path.join(currentDirectory, 'links.txt'), 'r', encoding='utf-8') as file:
                 visitedLinks = file.read().splitlines()
-            print(visitedLinks)
         except:
             print(f'File not found\n')
             vFile = False
