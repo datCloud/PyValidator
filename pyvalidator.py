@@ -701,7 +701,7 @@ try:
     # Mobile, SEO and W3C validations
 
     if vW3C or vSEO or vMobile:
-        visitedLinks.append(url + '404')
+        if not vFile: visitedLinks.append(url + '404')
         visitedLinks = list(set(visitedLinks))
         for link in tqdm(visitedLinks):
             if vDegug: print(link)
