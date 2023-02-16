@@ -23,6 +23,9 @@ import requests
 import xmltodict
 
 import git
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def RepoIsUpToDate():
     repo = git.Repo(search_parent_directories=True)
@@ -47,6 +50,8 @@ def KillNgrok():
     #     return False
 
 try:
+
+    use_ssl = False
     
     RepoIsUpToDate()
 
@@ -69,7 +74,7 @@ try:
                 break
 
         if canCheckRobots:
-            r = session.get(url + 'robots.txt', headers = defaultHeader)
+            r = session.get(url + 'robots.txt', headers = defaultHeader, verify = use_ssl)
             robots = r.text
             if url not in robots:
                 print('Robots -> Wrong')
@@ -220,7 +225,12 @@ try:
         return False if any(ext in url for ext in ignoreLinksWith) else True
 
     session = HTMLSession()
-    r = session.get(url, headers = defaultHeader)
+    try:
+        r = session.get(url, headers = defaultHeader, verify = use_ssl)
+    except:
+        use_ssl = True
+        r = session.get(url, headers = defaultHeader, verify = use_ssl)
+
     insideLinks = r.html.xpath('//a[not(@rel="nofollow")]/@href')
     menuTop = r.html.absolute_links
 
@@ -287,7 +297,7 @@ try:
         for link in tqdm(mpiLinks):
             if vDegug: print(link)
             issueMessages = []
-            r = session.get(link, headers = defaultHeader)
+            r = session.get(link, headers = defaultHeader, verify = use_ssl)
             if not CheckStatusCode(r, link): continue
             if mpiStyle is None:
                 mpiStyle = isICM(r, mpiLinks[0])
@@ -446,12 +456,12 @@ try:
         mobileUrl = f'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={pagespeedUrl}&category=performance&locale=pt_BR&strategy=mobile&key={apiKey}'
         desktopUrl = f'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={pagespeedUrl}&category=performance&locale=pt_BR&strategy=desktop&key={apiKey}'
 
-        mobileRequest = session.get(mobileUrl, headers = defaultHeader)
+        mobileRequest = session.get(mobileUrl, headers = defaultHeader, verify = use_ssl)
         jsonData = json.loads(mobileRequest.text)
         mobileScore = int(float(jsonData['lighthouseResult']['categories']['performance']['score']) * 100)
         print(f'Mobile score - {mobileScore}')
 
-        desktopRequest = session.get(desktopUrl, headers = defaultHeader)
+        desktopRequest = session.get(desktopUrl, headers = defaultHeader, verify = use_ssl)
         jsonData = json.loads(desktopRequest.text)
         desktopScore = int(float(jsonData['lighthouseResult']['categories']['performance']['score']) * 100)
         print(f'Desktop score - {desktopScore}')
@@ -465,7 +475,7 @@ try:
     def site_urls(insideLinks, hasSitemap):
         if vSitemap:
             sitemapUrl = url + 'sitemap.xml'
-            sitemapRequest = requests.get(sitemapUrl, headers = defaultHeader)
+            sitemapRequest = requests.get(sitemapUrl, headers = defaultHeader, verify = use_ssl)
             sitemapLinks = []
             try:
                 sitemapContent = xmltodict.parse(sitemapRequest.content)
@@ -504,7 +514,7 @@ try:
                 if 'orcamento' in link: continue
                 visitedLinks.append(link)
                 try:
-                    r = session.get(link, headers = defaultHeader)
+                    r = session.get(link, headers = defaultHeader, verify = use_ssl)
                 except:
                     print(f'Cannot access {link}')
                     pass
@@ -516,7 +526,7 @@ try:
                 site_urls(pageLinks, hasSitemap)
 
     def CheckForUniqueLinks(uniqueLinks):
-        r = session.get(url + '/mapa-site', headers = defaultHeader)
+        r = session.get(url + '/mapa-site', headers = defaultHeader, verify = use_ssl)
         sitemapElements = r.html.find('.sitemap li a')
         sitemapLinks = []
         unlistedLinks = []
@@ -537,7 +547,7 @@ try:
         return linksList
 
     def CompareMenus():
-        r = session.get(url, headers = defaultHeader)
+        r = session.get(url, headers = defaultHeader, verify = use_ssl)
         menuTop = r.html.find('header nav[id*="menu"] > ul > li > a')
         menuFooter = r.html.find('footer .menu-footer nav > ul > li > a')
         
@@ -628,7 +638,7 @@ try:
     # MPI
 
     mpiBaseLink = (url + 'mapa-site') if url[-1:] == '/' else (url + '/mapa-site')
-    r = session.get(mpiBaseLink, headers = defaultHeader)
+    r = session.get(mpiBaseLink, headers = defaultHeader, verify = use_ssl)
     if vMapaSite:
         mapaSiteLinks = []
         for mapaSiteLink in r.html.find('.sitemap a'):
@@ -704,7 +714,7 @@ try:
         visitedLinks = list(set(visitedLinks))
         for link in tqdm(visitedLinks):
             if vDegug: print(link)
-            r = session.get(link, headers = defaultHeader)
+            r = session.get(link, headers = defaultHeader, verify = use_ssl)
             if not CheckStatusCode(r, link):
                 inaccessibleLinks.append(link)
                 continue
