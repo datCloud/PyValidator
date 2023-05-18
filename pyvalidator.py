@@ -16,7 +16,6 @@ import sys
 import base64
 from pyfiglet import Figlet
 import re
-from pyngrok import ngrok
 #import psutil
 
 import requests
@@ -38,24 +37,13 @@ def RepoIsUpToDate():
         print(f'{Fore.YELLOW}There are new commits on remote repository\nTo continue using PyValidator you need to updated it{Style.RESET_ALL}')
         quit()
 
-def KillNgrok():
-    return False
-    # try:
-    #     for proc in psutil.process_iter():
-    #         if proc.name() == 'ngrok.exe':
-    #             proc.kill()
-    #             break
-    #         return True
-    # except:
-    #     return False
-
 try:
 
     use_ssl = False
     
     RepoIsUpToDate()
 
-    notForRobots = ['mpitemporario', 'localhost', 'ngrok.io']
+    notForRobots = ['mpitemporario', 'localhost']
 
     mpiRules = {
         'h2Count': 1,
@@ -114,15 +102,6 @@ try:
         if str.split(' -')[0].split('/')[-1] != '': return True
         return False
 
-    def ConnectTunnel():
-        try:
-            if KillNgrok():
-                ngrok.set_auth_token('2HgY4jjMWV3QGx2tPaJllgjMS0A_6cpwp66fALR5RrXgFGC7i')
-                tunnel = ngrok.connect()
-                return str(tunnel).split('\"')[1]
-        except:
-            print(f'{Fore.RED}Cannot create connection with ngrok module.{Style.RESET_ALL}')
-            quit()
 
     while InputValidation(url):
         os.system('clear')
@@ -150,9 +129,6 @@ try:
         if tries > 2: print(f'\n{Back.RED} TRY SOMETHING LIKE THIS, BRO ¬¬ \n https://domain.com.br/ -w -s {Style.RESET_ALL}')
         url = input(str('\nPaste the url here: '))
 
-    def SetAltUrl(url, validateW3C):
-        return ConnectTunnel() + url.split('localhost')[1] if 'localhost' in url and validateW3C else url
-
     def GetDomain(url):
         extract_project_domain = re.compile('https?:\/\/(?:[w]{3,}.)?(?:localhost|(?:producao.)?mpitemporario.com.br/(?:projetos)?)?(?:\/)?(.*?)?\/')
         return [match.group(1) for match in re.finditer(extract_project_domain, url)][0]
@@ -160,11 +136,11 @@ try:
     domain = GetDomain(url)
     url_first_part = url.split('//')[1].split('/')[0]
 
-    def W3CValidation(url, baseUrl, ngrokUrl):
+    def W3CValidation(url):
         os.system(f'htmlcheck -v 0 page {url} --exporter json --destination .')
-        CheckValidationLog(url, baseUrl, ngrokUrl)
+        CheckValidationLog(url)
     
-    def CheckValidationLog(url, baseUrl, ngrokUrl):
+    def CheckValidationLog(url):
         logFile = open(os.path.join(currentDirectory, 'audit.json'), 'r')
         jsonLog = json.load(logFile)
         hasErrors = False
@@ -172,15 +148,12 @@ try:
             if key == 'debugs' or key == 'infos' or int(value) == 0: continue
             if not hasErrors:
                 hasErrors = True
-                print(f'\n{Fore.YELLOW}W3C Issues in{Style.RESET_ALL} {url if  baseUrl in url else url.replace(ngrokUrl, baseUrl)}')
+                print(f'\n{Fore.YELLOW}W3C Issues in{Style.RESET_ALL} {url}')
             print(f'{key.title()}: {value}')
 
     def GetUrl(urlInput):
         urlInput = urlInput.split(' ')[0]
         return urlInput if urlInput[-1:] == '/' else urlInput + '/'
-
-    def SwapBaseUrl(url, w3cUrl, baseUrl):
-        return url if w3cUrl in url else url.replace(baseUrl, w3cUrl)
 
     vPagespeed = True if ' -p' in url else False
     vW3C = True if ' -w' in url else False
@@ -208,8 +181,6 @@ try:
         # vMisc = False
 
     vImageData = False
-
-    ngrokUrl = GetUrl(SetAltUrl(url, vW3C))
 
     url = GetUrl(url)
     baseUrl = url
@@ -487,15 +458,8 @@ try:
             except:
                 pass
             if len(sitemapLinks) > 0:
-                global localToRemote 
-                localToRemote = False
-                if 'localhost' in sitemapLinks[0]:
-                    localToRemote = []
                 for sitemapLink in sitemapLinks:
                     if '.pdf' not in sitemapLink and 'tim.php' not in sitemapLink and 'thumbs.php' not in sitemapLink:
-                        if isinstance(localToRemote, list):
-                            localToRemote.append(sitemapToCurrentUrl(sitemapLink, baseUrl))
-                        # visitedLinks.append(sitemapToCurrentUrl(sitemapLink, baseUrl))
                         visitedLinks.append(sitemapLink)
                 if url + '404' in visitedLinks:
                     print('Found 404 link in sitemap.xml')
@@ -723,22 +687,16 @@ try:
             if vSEO:
                 SEOValidation(r)
             if vW3C:
-                # print(SwapBaseUrl(link, ngrokUrl, baseUrl))
-                W3CValidation(SwapBaseUrl(link, ngrokUrl, baseUrl), baseUrl, ngrokUrl)
+                W3CValidation(link)
 
     if vMobile:
         driver.close()
         driver.quit()
 
-    if vW3C:
-        if len(ngrok.get_tunnels()) > 0 : ngrok.kill()
-
     print('Finished')
 
 except KeyboardInterrupt:
     print('Interrupting validation')
-
-    KillNgrok()
     try:
         sys.exit(0)
     except SystemExit:
