@@ -9,9 +9,9 @@ import json
 from colorama import Fore, Back, Style
 from selenium import webdriver
 import random
-from selenium.webdriver.firefox.options import Options
-from selenium.webdriver.firefox.service import Service
-from webdriver_manager.firefox import GeckoDriverManager
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 import sys
 import base64
 from pyfiglet import Figlet
@@ -212,18 +212,25 @@ try:
     CheckRobots(url)
 
     if vMobile or vMisc:
-
-        driver_options = webdriver.FirefoxOptions()
+        
+        set_device_metrics_override = dict({
+            "width": 320,
+            "height": 568,
+            "deviceScaleFactor": 50,
+            "mobile": True
+        })
+        
+        user_agent = "Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1"
+        
+        driver_options = webdriver.ChromeOptions()
+        driver_options.add_argument(f'--user-agent="{user_agent}"')
         driver_options.add_argument("--headless")
-        # driver_options.add_argument("--no-sandbox")
         driver_options.add_argument("--disable-gpu")
-        try:
-            driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()), options=driver_options)
-        except:
-            driver_options.binary_location = os.path.join(os.path.expanduser('~'), r'AppData\Local\Mozilla Firefox\firefox.exe')
-            driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()), options=driver_options)
-        driver.set_window_position(0, 0)
-        driver.set_window_size(350, 568)
+        driver_options.add_argument("--log-level=3")
+        driver_options.add_argument("start-maximized")
+        
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=driver_options)
+        driver.execute_cdp_cmd('Emulation.setDeviceMetricsOverride', set_device_metrics_override)
 
     if vMisc:
         driver.get(url)
