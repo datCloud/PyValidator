@@ -555,6 +555,14 @@ try:
         else:
             print('The texts are the same')
         print('-' * 40)
+        
+    # Check if page mentions "Doutores da Web"
+
+    def HasDefaultText(r, link):
+        if 'doutores da web' in r.html.find('body', first = True).text.lower():
+            print('-------------- Text Error --------------')
+            print(f'Found "Doutores da Web" in \n{link}')
+            print('------------ Text Error End ------------')
 
     # SEO Validation function
 
@@ -588,12 +596,12 @@ try:
             except KeyError as err:
                 print(f'{Fore.YELLOW}Image without src in: {Style.RESET_ALL}{link} \n{checkImage.html}\n')
             try:
-                if 'escrev' in checkImage.attrs['title'].lower() or checkImage.attrs['title'] == '':
+                if 'escrev' in checkImage.attrs['title'].lower() or 'doutores da web' in checkImage.attrs['title'].lower() or checkImage.attrs['title'] == '':
                     print(f'{Fore.YELLOW}Wrong title in: {Style.RESET_ALL}{link} \n{checkImage.attrs["src"] if currentImageSrc else checkImage.html}\n')
             except KeyError as err:
                 print(f'{Fore.YELLOW}Image without title in: {Style.RESET_ALL}{link} \n{checkImage.attrs["src"] if currentImageSrc else checkImage.html}\n')
             try:
-                if 'escrev' in checkImage.attrs['alt'].lower() or checkImage.attrs['alt'] == checkImage.html:
+                if 'escrev' in checkImage.attrs['alt'].lower() or 'doutores da web' in checkImage.attrs['alt'].lower() or checkImage.attrs['alt'] == checkImage.html:
                     print(f'{Fore.YELLOW}Wrong alt in: {Style.RESET_ALL}{link} \n{checkImage.attrs["src"] if currentImageSrc else checkImage.html}\n')
             except KeyError as err:
                 print(f'{Fore.YELLOW}Image without alt in: {Style.RESET_ALL}{link} \n{checkImage.attrs["src"] if currentImageSrc else checkImage.html}\n')
@@ -601,7 +609,7 @@ try:
             try:
                 if 'facebook' in checkLink.attrs['href'].lower():
                     continue
-                if 'escrev' in checkLink.attrs['title'].lower() or checkLink.attrs['title'] == '':
+                if 'escrev' in checkLink.attrs['title'].lower() or 'doutores da web' in checkLink.attrs['title'].lower() or checkLink.attrs['title'] == '':
                     print(f'{Fore.YELLOW}Link with wrong title in: {Style.RESET_ALL}{link} \n{checkLink.attrs["href"]}\n')
             except KeyError as err:
                 print(f'{Fore.YELLOW}Link without title in {Style.RESET_ALL}{link} \n{checkLink.attrs["href"]}\n')
@@ -686,6 +694,7 @@ try:
         for link in tqdm(visitedLinks):
             if vDegug: print(link)
             r = session.get(link, headers = defaultHeader, verify = use_ssl)
+            HasDefaultText(r, url)
             if not CheckStatusCode(r, link):
                 inaccessibleLinks.append(link)
                 continue
