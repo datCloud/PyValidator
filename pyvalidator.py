@@ -4,6 +4,7 @@ import time
 import os
 import inspect
 import errno
+import socket
 from socket import error as socket_error
 import json
 from colorama import Fore, Back, Style
@@ -16,7 +17,6 @@ import sys
 import base64
 from pyfiglet import Figlet
 import re
-#import psutil
 
 import requests
 import xmltodict
@@ -24,9 +24,12 @@ import xmltodict
 import git
 import urllib3
 
+import subprocess
+import pkgutil
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-def RepoIsUpToDate():
+def repo_is_up_to_date():
     repo = git.Repo(search_parent_directories=True)
     repo.remotes.origin.fetch()
     commits_behind = repo.iter_commits('master..origin/master')
@@ -40,8 +43,9 @@ def RepoIsUpToDate():
 try:
 
     use_ssl = False
+    vnu_port = 4242
     
-    RepoIsUpToDate()
+    repo_is_up_to_date()
 
     notForRobots = ['mpitemporario', 'localhost']
 
@@ -53,7 +57,7 @@ try:
         'strongCount': 3
     }
 
-    def CheckRobots(str):
+    def check_robots(str):
         canCheckRobots = False
 
         for ignoreRobotsItem in notForRobots:
@@ -67,7 +71,7 @@ try:
             if url not in robots:
                 print('Robots -> Wrong')
 
-    def CheckGHToken():
+    def check_gh_token():
         try:
             userDataFile = open(os.path.join(currentDirectory, 'user.auth'), 'r', encoding='utf-8')
             userDataList = []
@@ -87,7 +91,7 @@ try:
         return ghToken
 
     currentDirectory = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-    os.environ['GH_TOKEN'] = CheckGHToken()
+    os.environ['GH_TOKEN'] = check_gh_token()
 
     f = Figlet(font='slant')
 
@@ -95,15 +99,15 @@ try:
 
     url = ''
 
-    tries = -1
+    tries = 0
 
-    def InputValidation(str):
+    def input_validation(str):
         if ' -' not in str: return True
         if str.split(' -')[0].split('/')[-1] != '': return True
         return False
 
 
-    while InputValidation(url):
+    while input_validation(url):
         os.system('clear')
         print(Fore.YELLOW)
         print(f.renderText('PyValidator'))
@@ -121,37 +125,56 @@ try:
         print('-u ------- Search for links that aren\'t in the menu')
         print('-c ------- Compare top and footer menus (Old websites)')
         print('-a ------- Check all errors')
-        # print('-d ------- Debug Mode')
-        # print('MISC')
-        # print('-u ------- Check User Analytics')
+        print('-d ------- Show links while validate')
+        print('-e ------- Export crawled link (usefull for upsells)')
+        print('-f ------- Get links from links.txt')
         print('\nExample: [url] [parameter] [...]', Style.RESET_ALL)
         tries += 1
-        if tries > 2: print(f'\n{Back.RED} TRY SOMETHING LIKE THIS, BRO ¬¬ \n https://domain.com.br/ -w -s {Style.RESET_ALL}')
+        if tries > 3: print(f'\n{Back.RED} TRY SOMETHING LIKE THIS, BRO ¬¬ \n https://domain.com.br/ -w -s {Style.RESET_ALL}')
         url = input(str('\nPaste the url here: '))
 
-    def GetDomain(url):
-        extract_project_domain = re.compile('https?:\/\/(?:[w]{3,}.)?(?:localhost|(?:producao.)?mpitemporario.com.br/(?:projetos)?)?(?:\/)?(.*?)?\/')
-        return [match.group(1) for match in re.finditer(extract_project_domain, url)][0]
-
-    domain = GetDomain(url)
     url_first_part = url.split('//')[1].split('/')[0]
 
-    def W3CValidation(url):
-        os.system(f'htmlcheck -v 0 page {url} --exporter json --destination .')
-        CheckValidationLog(url)
-    
-    def CheckValidationLog(url):
-        logFile = open(os.path.join(currentDirectory, 'audit.json'), 'r')
-        jsonLog = json.load(logFile)
-        hasErrors = False
-        for key, value in jsonLog['statistics'].items():
-            if key == 'debugs' or key == 'infos' or int(value) == 0: continue
-            if not hasErrors:
-                hasErrors = True
-                print(f'\n{Fore.YELLOW}W3C Issues in{Style.RESET_ALL} {url}')
-            print(f'{key.title()}: {value}')
+    def read_json_from_url(url):
+        response = requests.get(url) 
+        return response.json()
 
-    def GetUrl(urlInput):
+    def w3c_validation(url, port):
+        vnu_json = read_json_from_url(f'http://localhost:{port}/?out=json&doc={url}')
+        if(vnu_has_errors(vnu_json)):
+            print(f'\n{Fore.YELLOW}{Style.BRIGHT}W3C Issues:{Style.RESET_ALL}\n\t{Style.BRIGHT}Origin:{Style.RESET_ALL} {url}\n\t{Style.BRIGHT}Report:{Style.RESET_ALL} http://localhost:{port}/?doc={url}')
+    
+    def vnu_has_errors(json_obj):
+        return False if len(json_obj['messages']) == 0 else not all(msg['type'] in ['info'] for msg in json_obj['messages'])
+
+    def get_package_path(package_name):
+        loader = pkgutil.find_loader(package_name)
+        if loader is None:
+            print(f'No module "{package_name}" found.\nTo fix run:\n\tpip install py-html-checker[cli,jinja]')
+            quit()
+
+        elif hasattr(loader, 'get_filename'):
+            # Installed via pip or similar 
+            return loader.get_filename(package_name)
+
+        elif hasattr(loader, 'get_data'):
+            # For packages in current directory or PYTHONPATH
+            return loader.get_data(package_name).__file__
+
+    def is_port_free(port):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        result = sock.connect_ex(('localhost', port))
+        sock.close()
+        return result
+
+    def serve_nu_validator(port):
+        if(is_port_free(port)):
+            process = subprocess.Popen(f'java -cp ./vnu/vnu.jar nu.validator.servlet.Main {port}', creationflags = subprocess.CREATE_NO_WINDOW)
+        else:
+            print(f'{Fore.YELLOW}Nu Html Checker already running locally{Style.RESET_ALL}')
+        print(f'{Fore.YELLOW}Access local instance of Nu Html Checker at {Style.RESET_ALL}{Style.BRIGHT}http://localhost:{port}{Style.RESET_ALL}')
+
+    def get_url(urlInput):
         urlInput = urlInput.split(' ')[0]
         return urlInput if urlInput[-1:] == '/' else urlInput + '/'
 
@@ -160,29 +183,25 @@ try:
     vSEO = True if ' -s' in url else False
     vMPI = True if ' -m' in url else False
     vUniqueLinks = True if ' -u' in url else False
-    vMenus = True if ' -c' in url else False
     vMobile = True if ' -l' in url else False
     vAll = True if ' -a' in url else False
     vSitemap = True if ' -x' in url else False
-    vMisc = True if ' -u' in url else False
-    vMisc = False
     vMapaSite = True if ' -z' in url else False
-    vDegug = True if ' -z' in url else False
+    vDebug = True if ' -d' in url else False
     vFile = True if ' -f' in url else False
+    vExport = True if ' -e' in url else False
 
     if vAll:
         vPagespeed = True
         vW3C = True
         vSEO = True
         vMPI = True
-        vUniqueLinks = True
-        vMenus = True
+        # vUniqueLinks = True
         vMobile = True
-        # vMisc = False
 
     vImageData = False
 
-    url = GetUrl(url)
+    url = get_url(url)
     baseUrl = url
 
     defaultHeader = {
@@ -194,6 +213,8 @@ try:
     def valid_url(url):
         url = url.lower()
         return False if any(ext in url for ext in ignoreLinksWith) else True
+
+    serve_nu_validator(vnu_port)
 
     session = HTMLSession()
     try:
@@ -209,9 +230,9 @@ try:
 
     imageList = []
 
-    CheckRobots(url)
+    check_robots(url)
 
-    if vMobile or vMisc:
+    if vMobile:
         
         set_device_metrics_override = dict({
             "width": 320,
@@ -232,53 +253,44 @@ try:
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=driver_options)
         driver.execute_cdp_cmd('Emulation.setDeviceMetricsOverride', set_device_metrics_override)
 
-    if vMisc:
-        driver.get(url)
-        analyticsId = driver.execute_script('return Object.keys(window.gaData)[0]')
-        print('Analytics ID -> ' + analyticsId)
-
-    def GetWidth(pageUrl): 
+    def get_mobile_width(pageUrl): 
         driver.get(pageUrl)
         windowWidth = driver.execute_script('return document.body.clientWidth')
         documentWidth = driver.execute_script('return document.body.scrollWidth')
         if windowWidth < documentWidth:
-            print('\n------------- LATERAL SCROLL -------------\n')
-            print(f'W: {windowWidth}\nC: {documentWidth}\n\t{pageUrl}')
-            print('Page content larger than window')
-            print('\n----------- END LATERAL SCROLL -----------\n')
+            print(f'\n{Fore.YELLOW}{Style.BRIGHT}Mobile issue:{Style.RESET_ALL}\n\t{Style.BRIGHT}Window width:{Style.RESET_ALL} {windowWidth}\n\t{Style.BRIGHT}Document width:{Style.RESET_ALL} {documentWidth}\n\t{Style.BRIGHT}Origin:{Style.RESET_ALL} {pageUrl}')
 
-    def checkDuplicatedMPI(mpiLinks):
+    def check_duplicated_mpis(mpiLinks):
         allMPILinks = set()
         duplicatedMPILinks = [x for x in mpiLinks if x in allMPILinks or allMPILinks.add(x)]
         if duplicatedMPILinks:
-            print('\nDuplicated MPIs:')
+            print(f'\n{Fore.YELLOW}{Style.BRIGHT}Duplicated MPIs:{Style.RESET_ALL}')
             for duplicatedMPI in duplicatedMPILinks:
                 print(f'\t{duplicatedMPI}')
             print(f'\n')
             return duplicatedMPILinks
         return False
 
-    def isICM(response, mpiLink):
+    def is_icm(response, mpiLink):
         return True if response.html.find('body.mpi-rules', first = True) else False
 
-    def CheckStatusCode(response, link):
+    def check_status_code(response, link):
         code = response.status_code
         if code != 200:
-            # print(response)
-            print(f'\n{Back.RED}Link redirects to {code}:{Style.RESET_ALL} {link}')
+            print(f'\n{Back.RED}{Style.BRIGHT}Link redirects to {code}:{Style.RESET_ALL} {link}')
             return False
         return True
 
-    def CheckIssues(mpiLinks):
+    def check_issues(mpiLinks):
         issueUrls = []
         mpiStyle = None
         for link in tqdm(mpiLinks):
-            if vDegug: print(link)
+            if vDebug: print(link)
             issueMessages = []
             r = session.get(link, headers = defaultHeader, verify = use_ssl)
-            if not CheckStatusCode(r, link): continue
+            if not check_status_code(r, link): continue
             if mpiStyle is None:
-                mpiStyle = isICM(r, mpiLinks[0])
+                mpiStyle = is_icm(r, mpiLinks[0])
                 
             mpiElement = r.html.find('ul.thumbnails, .card, .card--mpi', first = True)
             if mpiElement: continue
@@ -286,7 +298,7 @@ try:
             try:
                 description = r.html.find('head meta[name="description"]', first=True).attrs['content']
             except:
-                print(f'Cannot find meta tag description from {link}')
+                print(f'{Fore.YELLOW}{Style.BRIGHT}MPI issue:{Style.RESET_ALL}\n\tCannot find meta tag description from {link}')
                 continue
             images = len(r.html.find('ul.gallery img'))
             if images == 0:
@@ -416,21 +428,21 @@ try:
                 issueMessages.append(f'There are {len(sequentialTitle)} title(s) in sequence')
                 hasIssues = True
             if hasIssues :
-                print('\n')
+                print(f'\n{Fore.YELLOW}{Style.BRIGHT}MPI issues:{Style.RESET_ALL}')
                 for issue in issueMessages:
-                    print(issue)
+                    print(f'\t{issue}')
 
-                print('in', link)
+                print(f'\t{Fore.YELLOW}{Style.BRIGHT}Origin: {Style.RESET_ALL}{link}')
         print('-------------- MPI Validation Finished --------------')
         if not vW3C and not vSEO and not vMobile:
             sys.exit('Finished')
 
-    def PageSpeed(pagespeedUrl, apiKey):
+    def page_speed(pagespeedUrl, apiKey):
 
         print(f'{pagespeedUrl}')
         
-        pagespeedUrl = pagespeedUrl.replace(':', '%3A')
-        pagespeedUrl = pagespeedUrl.replace('/', '%2F')
+        # pagespeedUrl = pagespeedUrl.replace(':', '%3A')
+        # pagespeedUrl = pagespeedUrl.replace('/', '%2F')
         mobileUrl = f'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={pagespeedUrl}&category=performance&locale=pt_BR&strategy=mobile&key={apiKey}'
         desktopUrl = f'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={pagespeedUrl}&category=performance&locale=pt_BR&strategy=desktop&key={apiKey}'
 
@@ -444,11 +456,6 @@ try:
         desktopScore = int(float(jsonData['lighthouseResult']['categories']['performance']['score']) * 100)
         print(f'Desktop score - {desktopScore}')
         print('-' * 40)
-
-    def sitemapToCurrentUrl(link, baseUrl):
-        urlDepth = len(link.split('/')) - 3
-        regexSintax = re.compile('(http(s?):\/\/' + ('.*?\/' * urlDepth) + ')')
-        return regexSintax.sub(baseUrl, link)
 
     def site_urls(insideLinks, hasSitemap):
         if vSitemap:
@@ -489,14 +496,14 @@ try:
                 except:
                     print(f'Cannot access {link}')
                     pass
-                if not CheckStatusCode(r, link):
+                if not check_status_code(r, link):
                     inaccessibleLinks.append(link)
                     continue
                 pageLinks = r.html.xpath('//a[not(@rel="nofollow")]/@href')
                 # print(link)
                 site_urls(pageLinks, hasSitemap)
 
-    def CheckForUniqueLinks(uniqueLinks):
+    def check_for_unique_links(uniqueLinks):
         r = session.get(url + '/mapa-site', headers = defaultHeader, verify = use_ssl)
         sitemapElements = r.html.find('.sitemap li a')
         sitemapLinks = []
@@ -512,107 +519,77 @@ try:
                 print(unlistedLink)
             print('------------------------')
 
-    def RemoveLinks(linksList, removeLinks):
+    def remove_links(linksList, removeLinks):
         for link in removeLinks:
             linksList.remove(link)
         return linksList
-
-    def CompareMenus():
-        r = session.get(url, headers = defaultHeader, verify = use_ssl)
-        menuTop = r.html.find('header nav[id*="menu"] > ul > li > a')
-        menuFooter = r.html.find('footer .menu-footer nav > ul > li > a')
-        
-        menuTopLinks = []
-        menuFooterLinks = []
-        for menuTopLink in menuTop:
-            menuTopLinks.append(menuTopLink.attrs['href'])
-        for menuFooterLink in menuFooter:
-            menuFooterLinks.append(menuFooterLink.attrs['href'])
-        menuTopLinks.append(url + 'mapa-site')
-
-        print('-' * 10 + ' COMPARING MENUS ' + '-' * 10)
-
-        print('Comparsion links of header\'s menu and footer\'s menu')
-
-        if False in [True if i == j else False for i,j in zip(menuTopLinks, menuFooterLinks)]:
-            print('There are wrong links or order')
-        else:
-            print('The links are the same')
-        print('-' * 40)
-        
-        menuTopTexts = []
-        menuFooterTexts = []
-        for menuTopText in menuTop:
-            menuTopTexts.append(menuTopText.text.lower())
-        for menuFooterText in menuFooter:
-            menuFooterTexts.append(menuFooterText.text.lower())
-        menuTopTexts.append('Mapa do site'.lower())
-
-        print('Comparsion texts of header\'s menu and footer\'s menu')
-
-        if False in [True if i == j else False for i,j in zip(menuTopTexts, menuFooterTexts)]:
-            print('There are wrong texts or order')
-        else:
-            print('The texts are the same')
-        print('-' * 40)
         
     # Check if page mentions "Doutores da Web"
 
-    def HasDefaultText(r, link):
+    def has_default_text(r, link):
         if 'doutores da web' in r.html.find('body', first = True).text.lower():
-            print('-------------- Text Error --------------')
-            print(f'Found "Doutores da Web" in \n{link}')
-            print('------------ Text Error End ------------')
+            print(f'{Fore.YELLOW}{Style.BRIGHT}Content mentions "Doutores da Web"\n\tOrigin:{Style.RESET_ALL} {link}')
+
+    def print_seo_alerts(title, link, ref):
+        text_style = f'{Fore.YELLOW}{Style.BRIGHT}'
+        print(f'\n{text_style}{title}\n\tOrigin: {Style.RESET_ALL}{link}\n\t{text_style}Reference: {Style.RESET_ALL}{ref}')
 
     # SEO Validation function
 
-    def SEOValidation(r):
+    def seo_validation(r):
         allImages = r.html.find('body img')
         allLinks = r.html.find('body a[href*="http"]')
 
         try:
-            h1 = r.html.find('h1', first=True).text
+            h1 = r.html.find('h1')
+            if len(h1) > 1:
+                print(f'\n{Fore.RED}{Style.BRIGHT}Multiple H1 found{Style.RESET_ALL}\n\t{Fore.YELLOW}{Style.BRIGHT}Origin:{Style.RESET_ALL} {link}')
+                return
+            h1 = h1[0].text
         except AttributeError as aerr:
-            h1 = 'Not found'
-            print(f'\nH1 not found in {link}\n')
+            print(f'\n{Fore.RED}{Style.BRIGHT}H1 not found{Style.RESET_ALL}\n\t{Fore.YELLOW}{Style.BRIGHT}Origin:{Style.RESET_ALL} {link}')
             return
 
         try:
             hidden_h1 = r.html.find('h1', first=True).attrs['hidden']
-            if(hidden_h1): print(f'\n{Fore.YELLOW}H1 with hidden attribute{Style.RESET_ALL}')
+            if(hidden_h1): print(f'\n{Fore.RED}{Style.BRIGHT}H1 with hidden attribute{Style.RESET_ALL}')
         except:
             pass
 
-        description = r.html.find('head meta[name="description"]', first=True).attrs['content'] 
 
-        if h1.lower() not in description.lower() and link != url: 
-            print(f'\nDescription doesn\'t have mention to H1 in {link}')
-        if len(description) < 140 or len(description) > 160 : 
-            print(f'\nDescription char count: {len(description)} \n in {link}')
+        description_element = r.html.find('head meta[name="description"]', first=True)
+        description_content = description_element.attrs['content']
+
+        if h1.lower() not in description_content.lower() and link != url:
+            print_seo_alerts('Description doesn\'t have mention to H1', link, description_element)
+        if len(description_content) < 140 or len(description_content) > 160 : 
+            print(f'\nDescription char count: {len(description_content)} \n in {link}')
         for checkImage in allImages:
             currentImageSrc = False
             try:
                 currentImageSrc = checkImage.attrs['src']
             except KeyError as err:
-                print(f'{Fore.YELLOW}Image without src in: {Style.RESET_ALL}{link} \n{checkImage.html}\n')
+                print_seo_alerts('Image without src', link, checkImage.html)
             try:
                 if 'escrev' in checkImage.attrs['title'].lower() or 'doutores da web' in checkImage.attrs['title'].lower() or checkImage.attrs['title'] == '':
-                    print(f'{Fore.YELLOW}Wrong title in: {Style.RESET_ALL}{link} \n{checkImage.attrs["src"] if currentImageSrc else checkImage.html}\n')
+                    print_seo_alerts('Wrong title', link, checkImage.html)
             except KeyError as err:
-                print(f'{Fore.YELLOW}Image without title in: {Style.RESET_ALL}{link} \n{checkImage.attrs["src"] if currentImageSrc else checkImage.html}\n')
+                print_seo_alerts('Image without title', link, checkImage.html)
             try:
                 if 'escrev' in checkImage.attrs['alt'].lower() or 'doutores da web' in checkImage.attrs['alt'].lower() or checkImage.attrs['alt'] == checkImage.html:
-                    print(f'{Fore.YELLOW}Wrong alt in: {Style.RESET_ALL}{link} \n{checkImage.attrs["src"] if currentImageSrc else checkImage.html}\n')
+                    print_seo_alerts('Wrong alt', link, checkImage.html)
             except KeyError as err:
-                print(f'{Fore.YELLOW}Image without alt in: {Style.RESET_ALL}{link} \n{checkImage.attrs["src"] if currentImageSrc else checkImage.html}\n')
+                print_seo_alerts('Image without alt', link, checkImage.html)
         for checkLink in allLinks:
             try:
                 if 'facebook' in checkLink.attrs['href'].lower():
                     continue
                 if 'escrev' in checkLink.attrs['title'].lower() or 'doutores da web' in checkLink.attrs['title'].lower() or checkLink.attrs['title'] == '':
-                    print(f'{Fore.YELLOW}Link with wrong title in: {Style.RESET_ALL}{link} \n{checkLink.attrs["href"]}\n')
+                    opening_tag_link = checkLink.html.split('>')[0] + '>'
+                    print_seo_alerts('Link with wrong title', link, opening_tag_link)
             except KeyError as err:
-                print(f'{Fore.YELLOW}Link without title in {Style.RESET_ALL}{link} \n{checkLink.attrs["href"]}\n')
+                opening_tag_link = checkLink.html.split('>')[0] + '>'
+                print_seo_alerts('Link without title', link, opening_tag_link)
 
     # MPI
 
@@ -628,19 +605,24 @@ try:
     for content in subMenuInfo:
         mpiLinks.append(str(content.links)[2:-2])
 
+    if vExport:
+        mpiListFile = open(os.path.join(currentDirectory, 'links.txt'), 'w+', encoding='utf-8')
+        for mpiLink in mpiLinks:
+            mpiListFile.write(f'{mpiLink}\n')
+        mpiListFile.close()
+
     if vMPI:
-        if len(mpiLinks) == 0: print(f'{Back.RED}No MPIs found in this project{Style.RESET_ALL} Make sure the submenu with the MPIs has the class {Fore.YELLOW}sub-menu-info{Style.RESET_ALL}')
+        if len(mpiLinks) == 0: print(f'{Back.RED}{Style.BRIGHT}No MPIs found in this project{Style.RESET_ALL}\nMake sure the submenu with the MPIs has the class {Fore.YELLOW}{Style.BRIGHT}sub-menu-info{Style.RESET_ALL}')
         else:
             print('-------------- MPI Validation --------------')
-            checkDuplicatedMPI(mpiLinks)  
-            CheckIssues(mpiLinks)
+            check_duplicated_mpis(mpiLinks)  
+            check_issues(mpiLinks)
 
     # Define a list that will receive all links
 
     links = []
     visitedLinks = [url]
 
-    strangeLinks = []
     inaccessibleLinks = []
 
     # PageSpeed
@@ -649,7 +631,7 @@ try:
 
         pageSpeedLinks = [url]
 
-        while len(pageSpeedLinks) != 1:
+        while len(pageSpeedLinks) < 2:
             uniqueMpi = random.choice(mpiLinks)
             if uniqueMpi not in pageSpeedLinks:
                 pageSpeedLinks.append(uniqueMpi)
@@ -660,7 +642,7 @@ try:
         apiKey = 'AIzaSyDFsGExCkww5IFLzG1aAnfSovxSN-IeHE0'
 
         for pageSpeedLink in pageSpeedLinks:
-            PageSpeed(pageSpeedLink, apiKey)
+            page_speed(pageSpeedLink, apiKey)
 
     if vFile:
         try:
@@ -674,36 +656,33 @@ try:
 
     if (vW3C or vSEO or vMobile) and not vFile:
         site_urls(insideLinks, hasSitemap)
-        visitedLinks = RemoveLinks(visitedLinks, inaccessibleLinks)
-
-    # Check menus
-
-    if vMenus:
-        CompareMenus()
+        visitedLinks = remove_links(visitedLinks, inaccessibleLinks)
 
     # Check for links that aren't in main menu
 
     if vUniqueLinks:
-        CheckForUniqueLinks(visitedLinks)
+        check_for_unique_links(visitedLinks)
 
     # Mobile, SEO and W3C validations
 
     if vW3C or vSEO or vMobile:
         if not vFile: visitedLinks.append(url + '404')
         visitedLinks = list(set(visitedLinks))
+        if url[:-1] in visitedLinks:
+            visitedLinks.remove(url[:-1])
         for link in tqdm(visitedLinks):
-            if vDegug: print(link)
+            if vDebug: print(link)
             r = session.get(link, headers = defaultHeader, verify = use_ssl)
-            HasDefaultText(r, url)
-            if not CheckStatusCode(r, link):
+            has_default_text(r, url)
+            if not check_status_code(r, link):
                 inaccessibleLinks.append(link)
                 continue
             if vMobile:
-                GetWidth(link)
+                get_mobile_width(link)
             if vSEO:
-                SEOValidation(r)
+                seo_validation(r)
             if vW3C:
-                W3CValidation(link)
+                w3c_validation(link, vnu_port)
 
     if vMobile:
         driver.close()
