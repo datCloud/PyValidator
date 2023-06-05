@@ -631,10 +631,8 @@ try:
 
         pageSpeedLinks = [url]
 
-        while len(pageSpeedLinks) < 2:
-            uniqueMpi = random.choice(mpiLinks)
-            if uniqueMpi not in pageSpeedLinks:
-                pageSpeedLinks.append(uniqueMpi)
+        if(len(mpiLinks) > 0):
+            pageSpeedLinks.append(random.choice(mpiLinks))
         
         print('-------------- PageSpeed Insights --------------')
         print('Checking PageSpeed Score...')
