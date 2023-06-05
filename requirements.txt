@@ -1,7 +1,7 @@
 colorama==0.4.6
 GitPython==3.1.31
 pyfiglet==0.8.post1
-requests==2.27.1
+requests==2.31.0
 requests_html==0.10.0
 selenium==4.9.1
 tqdm==4.64.0
