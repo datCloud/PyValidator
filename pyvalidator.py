@@ -250,7 +250,7 @@ try:
         driver_options.add_argument("--log-level=3")
         driver_options.add_argument("start-maximized")
         
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=driver_options)
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager(version="114.0.5735.90").install()), options=driver_options)
         driver.execute_cdp_cmd('Emulation.setDeviceMetricsOverride', set_device_metrics_override)
 
     def get_mobile_width(pageUrl): 
