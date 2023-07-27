@@ -457,7 +457,7 @@ try:
         print(f'Desktop score - {desktopScore}')
         print('-' * 40)
 
-    def site_urls(insideLinks, hasSitemap):
+    def site_urls(insideLinks, hasSitemap, current_link):
         if vSitemap:
             sitemapUrl = url + 'sitemap.xml'
             sitemapRequest = requests.get(sitemapUrl, headers = defaultHeader, verify = use_ssl)
@@ -483,6 +483,8 @@ try:
                 print('Getting links...')
                 hasSitemap = True
         for link in insideLinks:
+            if link.count('://') > 1:
+                print(f'{Fore.RED}{Style.BRIGHT}Incorrect link{Style.RESET_ALL}\n\t{Style.BRIGHT}Link:{Style.RESET_ALL} {link}\n\t{Style.BRIGHT}Origin:{Style.RESET_ALL} {current_link}')
             if 'http' in link and url_first_part in link:
                 if valid_url(link):
                     links.append(link)
@@ -501,7 +503,7 @@ try:
                     continue
                 pageLinks = r.html.xpath('//a[not(@rel="nofollow")]/@href')
                 # print(link)
-                site_urls(pageLinks, hasSitemap)
+                site_urls(pageLinks, hasSitemap, link)
 
     def check_for_unique_links(uniqueLinks):
         r = session.get(url + '/mapa-site', headers = defaultHeader, verify = use_ssl)
@@ -653,7 +655,7 @@ try:
     # Crawls links from site
 
     if (vW3C or vSEO or vMobile) and not vFile:
-        site_urls(insideLinks, hasSitemap)
+        site_urls(insideLinks, hasSitemap, url)
         visitedLinks = remove_links(visitedLinks, inaccessibleLinks)
 
     # Check for links that aren't in main menu
