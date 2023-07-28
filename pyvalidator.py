@@ -145,6 +145,10 @@ try:
             print(f'\n{Fore.YELLOW}{Style.BRIGHT}W3C Issues:{Style.RESET_ALL}\n\t{Style.BRIGHT}Origin:{Style.RESET_ALL} {url}\n\t{Style.BRIGHT}Report:{Style.RESET_ALL} http://localhost:{port}/?doc={url}')
     
     def vnu_has_errors(json_obj):
+        for msg in json_obj['messages']:
+            try:
+                if msg['subType'] in ['warning']: return True
+            except: pass
         return False if len(json_obj['messages']) == 0 else not all(msg['type'] in ['info'] for msg in json_obj['messages'])
 
     def get_package_path(package_name):
