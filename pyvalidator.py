@@ -1,3 +1,4 @@
+from __future__ import print_function, unicode_literals
 from requests_html import HTMLSession
 from tqdm import tqdm
 import time
@@ -5,7 +6,6 @@ import os
 import inspect
 import errno
 import socket
-from socket import error as socket_error
 import json
 from colorama import Fore, Back, Style
 from selenium import webdriver
@@ -18,6 +18,10 @@ import base64
 from pyfiglet import Figlet
 import re
 
+from socket import error as socket_error
+from selenium.common.exceptions import UnexpectedAlertPresentException
+from requests.exceptions import MissingSchema
+
 import requests
 import xmltodict
 
@@ -26,6 +30,15 @@ import urllib3
 
 import subprocess
 import pkgutil
+
+from pprint import pprint
+from PyInquirer import style_from_dict, Token, prompt
+from PyInquirer import Validator, ValidationError
+
+from PIL import Image
+import io
+
+# from py_validator_lang import *
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -44,8 +57,90 @@ try:
 
     use_ssl = False
     vnu_port = 4242
+
+    mpis_links_file = 'mpis.txt'
     
-    repo_is_up_to_date()
+    # repo_is_up_to_date()
+
+    style = style_from_dict({
+        Token.QuestionMark: '#ff00ff bold',
+        Token.Selected: '#0000ff bold',
+        Token.Instruction: '#ff0000',  # default
+        Token.Answer: '#00ff00 bold',
+        Token.Question: '',
+    })
+
+    class UrlValidator(Validator):
+        def validate(self, document):
+            # ok = re.match('^([a-z\-]{3,}\.[a-z\-]{3,}(?:[\.]?[a-z]{3,})?(?:[\.]?[a-z]{2,})?)', document.text)
+            if not re.match('^(?:www\.)?([\w-]+\.[\w.-]+)$', document.text):
+                raise ValidationError(
+                    message='Enter a valid domain',
+                    cursor_position=len(document.text))  # Move cursor to end
+
+    questions = [
+        {
+            'type': 'confirm',
+            'name': 'validation_upsell',
+            'message': 'Is a MPI upsell?',
+            'default': False
+        },
+        {
+            'type': 'checkbox',
+            'message': 'What do you want to validate?',
+            'name': 'validation_params',
+            'choices': [
+                {
+                    'name': 'W3C issues (Powered by w3c.org)',
+                    'value': 'w'
+                },
+                {
+                    'name': 'SEO structure for Alt and Title attributes',
+                    'value': 's'
+                },
+                {
+                    'name': 'Validate MPIs',
+                    'value': 'm'
+                },
+                {
+                    'name': 'Mobile (Content width)',
+                    'value': 'l'
+                },
+                {
+                    'name': 'Pagespeed (Home and one random MPI)',
+                    'value': 'p'
+                }
+            ],
+            'when': lambda answers: answers['validation_upsell'] == False
+        },
+        {
+            'type': 'list',
+            'name': 'validation_crawler_mode',
+            'message': 'Choose the crawler mode:',
+            'choices': ['Default crawler', 'Use sitemap.xml', 'Use local file'],
+            'default': 'Default crawler',
+            'when': lambda answers: answers['validation_upsell'] == False
+        },
+        {
+            'type': 'list',
+            'name': 'validation_local',
+            'message': 'What\'s your server project?',
+            'choices': ['Produção', 'Contenção', 'Publicado'],
+        },
+        {
+            'type': 'input',
+            'name': 'validation_url',
+            'message': 'What\'s the project url? Ex.: site.com.br or www.site.com.br',
+            'validate': UrlValidator
+        },
+        {
+            'type': 'confirm',
+            'name': 'validation_export',
+            'message': 'Want to export all crawled links?',
+            'default': False,
+            'when': lambda answers: answers['validation_upsell'] == False
+        }
+    ]
 
     notForRobots = ['mpitemporario', 'localhost']
 
@@ -55,6 +150,15 @@ try:
         'descriptionRange': [140, 160],
         'keywordPositionInDescription': 19,
         'strongCount': 3
+    }
+
+    ext_mime = {
+        'jpg': 'JPEG',
+        'jpeg': 'JPEG',
+        'png': 'PNG',
+        'webp': 'WEBP',
+        'gif': 'GIF',
+        'svg': 'SVG'
     }
 
     def check_robots(str):
@@ -70,6 +174,42 @@ try:
             robots = r.text
             if url not in robots:
                 print('Robots -> Wrong')
+
+    def format_url(url, location):
+        return f'www.{url}' if not url.startswith('www.') and location == '' else url
+
+    def format_validation_string(answers_list):
+        protocol = 'https://'
+        local = {
+            'Produção': 'producao.mpitemporario.com.br/',
+            'Contenção': 'mpitemporario.com.br/projetos/',
+            'Publicado': ''
+        }
+        mode = {
+            'Default crawler': '',
+            'Use sitemap.xml': ' -x',
+            'Use local file': ' -f'
+        }
+
+        try:
+            current_mode = mode[answers_list['validation_crawler_mode']]
+        except KeyError:
+            current_mode = ''
+
+        choosed_local = local[answers_list['validation_local']]
+        current_url = format_url(answers_list['validation_url'], choosed_local)
+
+        try:
+            current_params = ' '.join([f'-{p}' for p in answers_list['validation_params']])
+        except KeyError:
+            current_params = ' -is_upsell'
+
+        try:
+            will_export = ' -e' if answers_list['validation_export'] == True else ''
+        except KeyError:
+            will_export = ''
+
+        return f'{protocol}{choosed_local}{current_url}/ {current_params}{will_export}{current_mode}'
 
     def check_gh_token():
         try:
@@ -97,41 +237,16 @@ try:
 
     ignoreLinksWith = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '?', '#', '.pdf', 'tel:', 'mailto:', '.mp4', '.webm', '.zip', '.rar', '.exe', '.xls', '.xls', '.doc']
 
-    url = ''
+    os.system('clear')
+    print(Fore.YELLOW)
+    print(f.renderText('PyValidator'))
+    print(f'(by datCloud)\n')
+    print(Style.RESET_ALL)
 
-    tries = 0
-
-    def input_validation(str):
-        if ' -' not in str: return True
-        if str.split(' -')[0].split('/')[-1] != '': return True
-        return False
-
-
-    while input_validation(url):
-        os.system('clear')
-        print(Fore.YELLOW)
-        print(f.renderText('PyValidator'))
-        print(f'(by datCloud)\n')
-        print('----------------------------------')
-        print('|          INSTRUCTIONS          |')
-        print('----------------------------------')
-        print('\nPaste the site URL followed by desired parameters\n')
-        print('-w ------- W3C issues (Powered by w3c.org)')
-        print('-s ------- SEO structure for Alt and Title attributes')
-        print('-m ------- Check MPI model and validade all MPIs ')
-        print('-l ------- Check lateral scroll on mobile')
-        print('-x ------- Use sitemap.xml to get site links (crawls faster)')
-        print('-p ------- Pagespeed score for the home page')
-        print('-u ------- Search for links that aren\'t in the menu')
-        print('-c ------- Compare top and footer menus (Old websites)')
-        print('-a ------- Check all errors')
-        print('-d ------- Show links while validate')
-        print('-e ------- Export crawled link (usefull for upsells)')
-        print('-f ------- Get links from links.txt')
-        print('\nExample: [url] [parameter] [...]', Style.RESET_ALL)
-        tries += 1
-        if tries > 3: print(f'\n{Back.RED} TRY SOMETHING LIKE THIS, BRO ¬¬ \n https://domain.com.br/ -w -s {Style.RESET_ALL}')
-        url = input(str('\nPaste the url here: '))
+    answers = prompt(questions, style=style)
+    url = format_validation_string(answers)
+    # print(url)
+    # quit()
 
     url_first_part = url.split('//')[1].split('/')[0]
 
@@ -190,10 +305,10 @@ try:
     vMobile = True if ' -l' in url else False
     vAll = True if ' -a' in url else False
     vSitemap = True if ' -x' in url else False
-    vMapaSite = True if ' -z' in url else False
     vDebug = True if ' -d' in url else False
     vFile = True if ' -f' in url else False
     vExport = True if ' -e' in url else False
+    vUpsell = True if ' -is_upsell' in url else False
 
     if vAll:
         vPagespeed = True
@@ -236,7 +351,7 @@ try:
 
     check_robots(url)
 
-    if vMobile:
+    if vMobile or vUpsell:
         
         set_device_metrics_override = dict({
             "width": 320,
@@ -257,12 +372,16 @@ try:
         driver = webdriver.Chrome(service=Service(ChromeDriverManager(version="114.0.5735.90").install()), options=driver_options)
         driver.execute_cdp_cmd('Emulation.setDeviceMetricsOverride', set_device_metrics_override)
 
-    def get_mobile_width(pageUrl): 
-        driver.get(pageUrl)
-        windowWidth = driver.execute_script('return document.body.clientWidth')
-        documentWidth = driver.execute_script('return document.body.scrollWidth')
-        if windowWidth < documentWidth:
-            print(f'\n{Fore.YELLOW}{Style.BRIGHT}Mobile issue:{Style.RESET_ALL}\n\t{Style.BRIGHT}Window width:{Style.RESET_ALL} {windowWidth}\n\t{Style.BRIGHT}Document width:{Style.RESET_ALL} {documentWidth}\n\t{Style.BRIGHT}Origin:{Style.RESET_ALL} {pageUrl}')
+    def get_mobile_width(pageUrl):
+        try:
+            driver.get(pageUrl)
+            windowWidth = driver.execute_script('return document.body.clientWidth')
+            documentWidth = driver.execute_script('return document.body.scrollWidth')
+            if windowWidth < documentWidth:
+                print(f'\n{Fore.YELLOW}{Style.BRIGHT}Mobile issue:{Style.RESET_ALL}\n\t{Style.BRIGHT}Window width:{Style.RESET_ALL} {windowWidth}\n\t{Style.BRIGHT}Document width:{Style.RESET_ALL} {documentWidth}\n\t{Style.BRIGHT}Origin:{Style.RESET_ALL} {pageUrl}')
+        except UnexpectedAlertPresentException:
+            print(f'\n{Fore.YELLOW}{Style.BRIGHT}Page shows alert{Style.RESET_ALL}\n\t{Style.BRIGHT}Origin:{Style.RESET_ALL} {pageUrl}')
+
 
     def check_duplicated_mpis(mpiLinks):
         allMPILinks = set()
@@ -287,17 +406,16 @@ try:
 
     def check_issues(mpiLinks):
         issueUrls = []
-        mpiStyle = None
         for link in tqdm(mpiLinks):
             if vDebug: print(link)
             issueMessages = []
             r = session.get(link, headers = defaultHeader, verify = use_ssl)
             if not check_status_code(r, link): continue
-            if mpiStyle is None:
-                mpiStyle = is_icm(r, mpiLinks[0])
                 
             mpiElement = r.html.find('ul.thumbnails, .card, .card--mpi', first = True)
             if mpiElement: continue
+
+            ignore_strong = r.html.find('body[data-no-strong]', first = True)
 
             try:
                 description = r.html.find('head meta[name="description"]', first=True).attrs['content']
@@ -310,31 +428,20 @@ try:
                     images = len(r.html.find('article:first img'))
                 except:
                     pass
-            if mpiStyle:
-                h2 = r.html.find('article:first h2')
-                articleElements = r.html.find('article:first h2, article:first p, article:first ul.list li')
-                strongsInArticle = r.html.find('article:first strong')
-                titleWithStrong = r.html.find('article:first h2 strong')
-                allParagraphs = r.html.find('article:first p, article:first ul.list li')
-            else:
-                h2 = r.html.find('article h2')
-                articleElements = r.html.find('article h2, article p, article ul.list li')
-                strongsInArticle = r.html.find('article strong')
-                titleWithStrong = r.html.find('article h2 strong')
-                allParagraphs = r.html.find('article p, article ul.list li')
 
-            hasIssues = False
+            h2 = r.html.find('article h2')
+            articleElements = r.html.find('article h2, article p, article ul.list li')
+            strongsInArticle = len(r.html.find('article strong'))
+            titleWithStrong = r.html.find('article h2 strong')
+            allParagraphs = r.html.find('article p, article ul.list li')
 
             try:
                 h1 = r.html.find('h1')
                 if(len(h1) > 1):
                     issueMessages.append('There is more than 1 H1')
-                    hasIssues = True
                 h1 = h1[0].text
             except AttributeError as aerr:
-                h1 = 'Not found'
                 issueMessages.append('There is no H1')
-                hasIssues = True
                 continue
 
             h2HasH1 = False
@@ -344,33 +451,28 @@ try:
                     break
 
             h2List = []
-            h1EqualsH2 = False
             for title in h2:
                 h2List.append(title.text)
-                if title.text.lower() == h1.lower() and not h1EqualsH2:
+                if title.text.lower() == h1.lower():
                     issueMessages.append('There are H2 equals to H1')
-                    hasIssues = True
-                    h1EqualsH2 = True
+                    break
 
             if len(h2List) != len(set(h2List)):
                 issueMessages.append('There are duplicated H2')
-                hasIssues = True
 
-            pAllList = []
             descriptionInArticle = False
-            for paragraph in allParagraphs:
-                if paragraph.text != '':
-                    if len(description) > 30:
+            if len(description) > 30:
+                for paragraph in allParagraphs:
+                    if paragraph.text != '': # remove
                         if description[:-20].lower().strip() in paragraph.text.lower() and not descriptionInArticle:
                             descriptionInArticle = True
+                            break
 
             if not descriptionInArticle:
                 issueMessages.append('Description not in article')
-                hasIssues = True
 
-            if len(pAllList) != len(set(pAllList)):
+            if len(allParagraphs) != len(set(allParagraphs)):
                 issueMessages.append('There are duplicated paragraphs')
-                hasIssues = True
 
             emptyElements = []
             for emptyElement in articleElements:
@@ -383,70 +485,47 @@ try:
                 if fakeTitle.text.isupper():
                     pUpper.append(fakeTitle)
             
-            fakeParagraphs = r.html.find('article h2:not(:last)')
-            h2Lower = []
-            for fakePragraph in fakeParagraphs:
-                if fakePragraph.text.islower():
-                    pUpper.append(fakePragraph)
-
             sequentialList = r.html.find('article ul + ul')
-            sequentialTitle = r.html.find('article:first h2 + h2')
+            sequentialTitle = r.html.find('article h2:not([data-tab]) + h2')
 
             if h1.lower() not in description.lower() : 
                 issueMessages.append('Description doesn\'t have mention to H1')
-                hasIssues = True
             elif description.lower().find(h1.lower()) > mpiRules['keywordPositionInDescription']:
                 issueMessages.append('H1 not in first 20 chars of description')
-                hasIssues = True
-            if len(strongsInArticle) < mpiRules['strongCount']:
-                issueMessages.append(f'There are only {len(strongsInArticle)} strongs in this article')
-                hasIssues = True
+            if strongsInArticle < mpiRules['strongCount'] and not ignore_strong:
+                issueMessages.append(f'There are only {strongsInArticle} strongs in this article')
             if len(titleWithStrong) > 0:
                 issueMessages.append(f'There are {len(titleWithStrong)} titles with strong in this article')
-                hasIssues = True
             if len(pUpper) > 0:
                 issueMessages.append(f'There are {len(pUpper)} uppercase p')
-                hasIssues = True
-            if len(h2Lower) > 0:
-                issueMessages.append(f'There are {len(fakeTitles)} uppercase p')
-                hasIssues = True
             if len(emptyElements) > 0:
                 issueMessages.append(f'There are {len(emptyElements)} empty elements')
-                hasIssues = True
             if len(description) < mpiRules['descriptionRange'][0] or len(description) > mpiRules['descriptionRange'][1] : 
                 issueMessages.append(f'Description char count: {len(description)}')
-                hasIssues = True
             if images < mpiRules['imageCount'] :
                 issueMessages.append(f'Image count: {images}')
-                hasIssues = True
             if len(h2) < mpiRules['h2Count'] :
                 issueMessages.append(f'H2 count: {len(h2)}')
-                hasIssues = True
             if not h2HasH1:
                 issueMessages.append(f'H2 text doesn\'t have mention to H1 in')
-                hasIssues = True
             if len(sequentialList) > 0 :
                 issueMessages.append(f'There are {len(sequentialList)} list(s) in sequence')
-                hasIssues = True
             if len(sequentialTitle) > 0 :
                 issueMessages.append(f'There are {len(sequentialTitle)} title(s) in sequence')
-                hasIssues = True
-            if hasIssues :
+            if len(issueMessages) > 0 :
                 print(f'\n{Fore.YELLOW}{Style.BRIGHT}MPI issues:{Style.RESET_ALL}')
                 for issue in issueMessages:
                     print(f'\t{issue}')
 
                 print(f'\t{Fore.YELLOW}{Style.BRIGHT}Origin: {Style.RESET_ALL}{link}')
         print('-------------- MPI Validation Finished --------------')
-        if not vW3C and not vSEO and not vMobile:
+        if not vW3C and not vSEO and not vMobile and not vUpsell:
             sys.exit('Finished')
 
     def page_speed(pagespeedUrl, apiKey):
 
         print(f'{pagespeedUrl}')
         
-        # pagespeedUrl = pagespeedUrl.replace(':', '%3A')
-        # pagespeedUrl = pagespeedUrl.replace('/', '%2F')
         mobileUrl = f'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={pagespeedUrl}&category=performance&locale=pt_BR&strategy=mobile&key={apiKey}'
         desktopUrl = f'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={pagespeedUrl}&category=performance&locale=pt_BR&strategy=desktop&key={apiKey}'
 
@@ -487,6 +566,7 @@ try:
                 print('Getting links...')
                 hasSitemap = True
         for link in insideLinks:
+            # if 'https://portal.mylimsweb.cloud/Login?company=Bioetica' in link:
             if link.count('://') > 1:
                 print(f'{Fore.RED}{Style.BRIGHT}Incorrect link{Style.RESET_ALL}\n\t{Style.BRIGHT}Link:{Style.RESET_ALL} {link}\n\t{Style.BRIGHT}Origin:{Style.RESET_ALL} {current_link}')
             if 'http' in link and url_first_part in link:
@@ -506,7 +586,6 @@ try:
                     inaccessibleLinks.append(link)
                     continue
                 pageLinks = r.html.xpath('//a[not(@rel="nofollow")]/@href')
-                # print(link)
                 site_urls(pageLinks, hasSitemap, link)
 
     def check_for_unique_links(uniqueLinks):
@@ -540,12 +619,41 @@ try:
         text_style = f'{Fore.YELLOW}{Style.BRIGHT}'
         print(f'\n{text_style}{title}\n\tOrigin: {Style.RESET_ALL}{link}\n\t{text_style}Reference: {Style.RESET_ALL}{ref}')
 
+    def get_img_ext(src):
+        regex = r'\.(jpg|jpeg|png|webp|gif|svg)\b'
+        match = re.search(regex, src)
+        return match.group(1) if match else None
+
+    def is_banner(src):
+        return True if '/slider/' in src or '/banner/' in src else False
+
+    def image_validation(img_src, link):
+        try:
+            img_response = requests.get(img_src)
+        except MissingSchema:
+            print_seo_alerts(f'Incorrect url', link, img_src)
+            return
+        img_data = img_response.content
+        img_ext = get_img_ext(img_src)
+        if img_ext != 'svg':
+            try:
+                img = Image.open(io.BytesIO(img_data))
+            except:
+                print_seo_alerts(f'(PROBABLY) Broken image', link, img_src)
+                return
+            width, height = img.size
+            img_mime = img.format
+            if (width > 800 or height > 800) and not is_banner(img_src): print_seo_alerts(f'Image dimensions: {width}x{height}', link, img_src)
+        else:
+            img_mime = 'SVG'
+        if ext_mime.get(img_ext) != img_mime: print_seo_alerts(f'Image extension x MIME: {img_ext} x {img_mime}', link, img_src)
+        if len(img_data)/1024 > 200 or (is_banner(img_src) and len(img_data)/1024 > 400): print_seo_alerts(f'Image filesize: {round(len(img_data)/1024, 2)}', link, img_src)
+
     # SEO Validation function
 
     def seo_validation(r):
         allImages = r.html.find('body img')
         allLinks = r.html.find('body a[href*="http"]')
-
         try:
             h1 = r.html.find('h1')
             if len(h1) > 1:
@@ -570,22 +678,22 @@ try:
             print_seo_alerts('Description doesn\'t have mention to H1', link, description_element)
         if len(description_content) < 140 or len(description_content) > 160 : 
             print(f'\nDescription char count: {len(description_content)} \n in {link}')
-        for checkImage in allImages:
-            currentImageSrc = False
+        for current_image in allImages:
             try:
-                currentImageSrc = checkImage.attrs['src']
+                img_src = current_image.attrs['src'] if current_image.attrs['src'] != '#' else current_image.attrs['data-lazy']
+                image_validation(img_src, link)
             except KeyError as err:
-                print_seo_alerts('Image without src', link, checkImage.html)
+                print_seo_alerts('Image without src', link, current_image.html)
             try:
-                if 'escrev' in checkImage.attrs['title'].lower() or 'doutores da web' in checkImage.attrs['title'].lower() or checkImage.attrs['title'] == '':
-                    print_seo_alerts('Wrong title', link, checkImage.html)
+                if 'escrev' in current_image.attrs['title'].lower() or 'doutores da web' in current_image.attrs['title'].lower() or current_image.attrs['title'] == '':
+                    print_seo_alerts('Wrong title', link, current_image.html)
             except KeyError as err:
-                print_seo_alerts('Image without title', link, checkImage.html)
+                print_seo_alerts('Image without title', link, current_image.html)
             try:
-                if 'escrev' in checkImage.attrs['alt'].lower() or 'doutores da web' in checkImage.attrs['alt'].lower() or checkImage.attrs['alt'] == checkImage.html:
-                    print_seo_alerts('Wrong alt', link, checkImage.html)
+                if 'escrev' in current_image.attrs['alt'].lower() or 'doutores da web' in current_image.attrs['alt'].lower() or current_image.attrs['alt'] == current_image.html:
+                    print_seo_alerts('Wrong alt', link, current_image.html)
             except KeyError as err:
-                print_seo_alerts('Image without alt', link, checkImage.html)
+                print_seo_alerts('Image without alt', link, current_image.html)
         for checkLink in allLinks:
             try:
                 if 'facebook' in checkLink.attrs['href'].lower():
@@ -597,32 +705,58 @@ try:
                 opening_tag_link = checkLink.html.split('>')[0] + '>'
                 print_seo_alerts('Link without title', link, opening_tag_link)
 
-    # MPI
+    # First check
 
-    mpiBaseLink = (url + 'mapa-site') if url[-1:] == '/' else (url + '/mapa-site')
-    r = session.get(mpiBaseLink, headers = defaultHeader, verify = use_ssl)
-    if vMapaSite:
-        mapaSiteLinks = []
-        for mapaSiteLink in r.html.find('.sitemap a'):
-            mapaSiteLinks.append(mapaSiteLink.attrs['href'].strip())
+    try:
+        r = session.get(url, headers = defaultHeader, verify = use_ssl)
+    except:
+        print(f'Cannot access {url}')
+        quit()
+    if not check_status_code(r, url):
+        quit()
 
-    subMenuInfo = r.html.find('.sitemap ul.sub-menu-info li a')
-    mpiLinks = []
-    for content in subMenuInfo:
-        mpiLinks.append(str(content.links)[2:-2])
+    # Get MPI Links
 
-    if vExport:
-        mpiListFile = open(os.path.join(currentDirectory, 'links.txt'), 'w+', encoding='utf-8')
-        for mpiLink in mpiLinks:
-            mpiListFile.write(f'{mpiLink}\n')
-        mpiListFile.close()
+    if vMPI or vUpsell:
+        r = session.get(f'{url}mapa-site', headers = defaultHeader, verify = use_ssl)
 
-    if vMPI:
-        if len(mpiLinks) == 0: print(f'{Back.RED}{Style.BRIGHT}No MPIs found in this project{Style.RESET_ALL}\nMake sure the submenu with the MPIs has the class {Fore.YELLOW}{Style.BRIGHT}sub-menu-info{Style.RESET_ALL}')
-        else:
-            print('-------------- MPI Validation --------------')
-            check_duplicated_mpis(mpiLinks)  
-            check_issues(mpiLinks)
+        mpi_list = r.html.find('header a[data-mpi]')
+        if len(mpi_list) == 0:
+            mpi_list = r.html.find('.sitemap ul.sub-menu-info li a')
+        mpiLinks = []
+        mpi_questions = [
+            {
+                'type': 'confirm',
+                'name': 'mpi_from_file',
+                'message': 'Get links from mpi.txt?',
+                'default': False
+            }
+        ]
+
+        while len(mpi_list) == 0 and len(mpiLinks) == 0:
+            if os.path.isfile(mpis_links_file):
+                os.remove(mpis_links_file)
+            open(mpis_links_file, 'w', encoding='utf-8').close()
+            print(f'{Back.RED}{Style.BRIGHT}No MPIs found in this project\nMake sure the submenu with the MPIs has the class sub-menu-info\nYou can fill the mpi.txt file to continue{Style.RESET_ALL}')
+            mpi_answer = prompt(mpi_questions, style=style)
+            if mpi_answer['mpi_from_file'] == False:
+                raise KeyboardInterrupt
+            with open(os.path.join(currentDirectory, mpis_links_file), 'r', encoding='utf-8') as file:
+                mpiLinks = file.read().splitlines()
+        
+        if len(mpiLinks) == 0:
+            for content in mpi_list:
+                mpiLinks.append(str(content.links)[2:-2])
+
+        if vExport:
+            mpiListFile = open(os.path.join(currentDirectory, 'links.txt'), 'w+', encoding='utf-8')
+            for mpiLink in mpiLinks:
+                mpiListFile.write(f'{mpiLink}\n')
+            mpiListFile.close()
+
+        print('-------------- MPI Validation --------------')
+        check_duplicated_mpis(mpiLinks)  
+        check_issues(mpiLinks)
 
     # Define a list that will receive all links
 
@@ -662,6 +796,9 @@ try:
         site_urls(insideLinks, hasSitemap, url)
         visitedLinks = remove_links(visitedLinks, inaccessibleLinks)
 
+    if vUpsell:
+        visitedLinks = mpiLinks    
+
     # Check for links that aren't in main menu
 
     if vUniqueLinks:
@@ -669,11 +806,13 @@ try:
 
     # Mobile, SEO and W3C validations
 
-    if vW3C or vSEO or vMobile:
-        if not vFile: visitedLinks.append(url + '404')
+    if vW3C or vSEO or vMobile or vUpsell:
+        if not vFile and not vUpsell: visitedLinks.append(url + '404')
         visitedLinks = list(set(visitedLinks))
         if url[:-1] in visitedLinks:
             visitedLinks.remove(url[:-1])
+        if url[:-1].replace('://', '://www.') in visitedLinks:
+            visitedLinks.remove(url[:-1].replace('://', '://www.'))
         for link in tqdm(visitedLinks):
             if vDebug: print(link)
             r = session.get(link, headers = defaultHeader, verify = use_ssl)
@@ -681,14 +820,14 @@ try:
             if not check_status_code(r, link):
                 inaccessibleLinks.append(link)
                 continue
-            if vMobile:
+            if vMobile or vUpsell:
                 get_mobile_width(link)
-            if vSEO:
+            if vSEO or vUpsell:
                 seo_validation(r)
-            if vW3C:
+            if vW3C or vUpsell:
                 w3c_validation(link, vnu_port)
 
-    if vMobile:
+    if vMobile or vUpsell:
         driver.close()
         driver.quit()
 
