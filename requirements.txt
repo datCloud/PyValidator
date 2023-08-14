@@ -1,9 +1,11 @@
 colorama==0.4.6
-GitPython==3.1.31
+GitPython==3.1.32
+Pillow==10.0.0
 pyfiglet==0.8.post1
+PyInquirer==1.0.3
 requests==2.31.0
 requests_html==0.10.0
-selenium==4.9.1
+selenium==4.11.2
 tqdm==4.64.0
 urllib3==1.26.9
 webdriver_manager==3.7.0
