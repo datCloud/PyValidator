@@ -8,5 +8,5 @@ requests_html==0.10.0
 selenium==4.11.2
 tqdm==4.64.0
 urllib3==1.26.9
-webdriver_manager==3.7.0
+webdriver_manager==4.0.0
 xmltodict==0.13.0
