@@ -415,7 +415,7 @@ try:
             mpiElement = r.html.find('ul.thumbnails, .card, .card--mpi', first = True)
             if mpiElement: continue
 
-            ignore_strong = r.html.find('body[data-no-strong]', first = True)
+            ignore_strong = True if r.html.find('body[data-no-strong]', first = True) else False
 
             try:
                 description = r.html.find('head meta[name="description"]', first=True).attrs['content']
