@@ -676,7 +676,7 @@ try:
         description_element = r.html.find('head meta[name="description"]', first=True)
         description_content = description_element.attrs['content']
 
-        if h1.lower() not in description_content.lower() and link != url:
+        if h1.lower() not in description_content.lower() and link.split(answers['validation_url'])[1] != url.split(answers['validation_url'])[1]:
             print_seo_alerts('Description doesn\'t have mention to H1', link, description_element)
         if len(description_content) < 140 or len(description_content) > 160 : 
             print(f'\nDescription char count: {len(description_content)} \n in {link}')
