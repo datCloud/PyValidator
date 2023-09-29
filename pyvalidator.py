@@ -645,7 +645,10 @@ try:
             if (width > 800 or height > 800) and not is_banner(img_src): print_seo_alerts(f'Image dimensions: {width}x{height}', link, img_src)
         else:
             img_mime = 'SVG'
-        if ext_mime.get(img_ext) != img_mime: print_seo_alerts(f'Image extension x MIME: {img_ext} x {img_mime}', link, img_src)
+        try:
+            if ext_mime.get(img_ext) != img_mime: print_seo_alerts(f'Image extension x MIME: {img_ext.upper()} x {img_mime}', link, img_src)
+        except AttributeError:
+            print_seo_alerts(f'Cannot get image extension', link, img_src)
         if len(img_data)/1024 > 200 or (is_banner(img_src) and len(img_data)/1024 > 400): print_seo_alerts(f'Image filesize: {round(len(img_data)/1024, 2)}', link, img_src)
 
     # SEO Validation function
