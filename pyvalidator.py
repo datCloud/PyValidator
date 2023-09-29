@@ -20,7 +20,7 @@ import re
 
 from socket import error as socket_error
 from selenium.common.exceptions import UnexpectedAlertPresentException
-from requests.exceptions import MissingSchema
+from requests.exceptions import MissingSchema, InvalidSchema
 
 import requests
 import xmltodict
@@ -630,7 +630,7 @@ try:
     def image_validation(img_src, link):
         try:
             img_response = requests.get(img_src)
-        except MissingSchema:
+        except (MissingSchema, InvalidSchema):
             print_seo_alerts(f'Incorrect url', link, img_src)
             return
         img_data = img_response.content
