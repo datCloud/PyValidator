@@ -566,7 +566,6 @@ try:
                 print('Getting links...')
                 hasSitemap = True
         for link in insideLinks:
-            # if 'https://portal.mylimsweb.cloud/Login?company=Bioetica' in link:
             if link.count('://') > 1 or re.search(r".*#$", link):
                 print(f'{Fore.RED}{Style.BRIGHT}Incorrect link{Style.RESET_ALL}\n\t{Style.BRIGHT}Link:{Style.RESET_ALL} {link}\n\t{Style.BRIGHT}Origin:{Style.RESET_ALL} {current_link}')
             if 'http' in link and url_first_part in link:
