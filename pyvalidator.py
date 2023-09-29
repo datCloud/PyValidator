@@ -422,7 +422,7 @@ try:
             except:
                 print(f'{Fore.YELLOW}{Style.BRIGHT}MPI issue:{Style.RESET_ALL}\n\tCannot find meta tag description from {link}')
                 continue
-            images = len(r.html.find('ul.gallery img'))
+            images = len(r.html.find('ul[class$="gallery"] img'))
             if images == 0:
                 try:
                     images = len(r.html.find('article:first img'))
