@@ -621,7 +621,7 @@ try:
 
     def get_img_ext(src):
         regex = r'\.(jpg|jpeg|png|webp|gif|svg)\b'
-        match = re.search(regex, src)
+        match = re.search(regex, src, re.IGNORECASE)
         return match.group(1) if match else None
 
     def is_banner(src):
