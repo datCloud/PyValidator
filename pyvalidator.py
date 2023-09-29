@@ -425,7 +425,7 @@ try:
             images = len(r.html.find('ul[class$="gallery"] img'))
             if images == 0:
                 try:
-                    images = len(r.html.find('article:first img'))
+                    images = len(r.html.find('article img'))
                 except:
                     pass
 
