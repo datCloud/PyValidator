@@ -342,7 +342,7 @@ try:
         use_ssl = True
         r = session.get(url, headers = defaultHeader, verify = use_ssl)
 
-    insideLinks = r.html.xpath('//a[not(@rel="nofollow")]/@href')
+    insideLinks = r.html.xpath('//a[not(@rel="nofollow")]')
     menuTop = r.html.absolute_links
 
     hasSitemap = False
@@ -540,6 +540,24 @@ try:
         print(f'Desktop score - {desktopScore}')
         print('-' * 40)
 
+    def has_event_listener(elem):
+        try:
+            return 'doGTranslate' in elem.attrs['onclick']
+        except KeyError:
+            return False
+
+    def count_protocol(elem):
+        try:
+            return elem.attrs['href'].count('://') > 1
+        except KeyError:
+            return False
+
+    def ends_with_hash(elem):
+        try:
+            return re.search(r".*#$", elem.attrs['href'])
+        except KeyError:
+            return False
+
     def site_urls(insideLinks, hasSitemap, current_link):
         if vSitemap:
             sitemapUrl = url + 'sitemap.xml'
@@ -566,11 +584,14 @@ try:
                 print('Getting links...')
                 hasSitemap = True
         for link in insideLinks:
-            if link.count('://') > 1 or re.search(r".*#$", link):
-                print(f'{Fore.RED}{Style.BRIGHT}Incorrect link{Style.RESET_ALL}\n\t{Style.BRIGHT}Link:{Style.RESET_ALL} {link}\n\t{Style.BRIGHT}Origin:{Style.RESET_ALL} {current_link}')
-            if 'http' in link and url_first_part in link:
-                if valid_url(link):
-                    links.append(link)
+            if count_protocol(link) or (ends_with_hash(link) and not has_event_listener(link)):
+                print(f'{Fore.RED}{Style.BRIGHT}Incorrect link{Style.RESET_ALL}\n\t{Style.BRIGHT}Link:{Style.RESET_ALL} {link.attrs["href"]}\n\t{Style.BRIGHT}Origin:{Style.RESET_ALL} {current_link}')
+            try:
+                if 'http' in link.attrs['href'] and url_first_part in link.attrs['href']:
+                    if valid_url(link.attrs['href']):
+                        links.append(link.attrs['href'])
+            except KeyError:
+                pass
         for link in links:
             if link not in visitedLinks:
                 if link[-1:] == '/' and link != baseUrl : continue
@@ -584,7 +605,7 @@ try:
                 if not check_status_code(r, link):
                     inaccessibleLinks.append(link)
                     continue
-                pageLinks = r.html.xpath('//a[not(@rel="nofollow")]/@href')
+                pageLinks = r.html.xpath('//a[not(@rel="nofollow")]')
                 site_urls(pageLinks, hasSitemap, link)
 
     def check_for_unique_links(uniqueLinks):
