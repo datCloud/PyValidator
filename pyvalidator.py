@@ -125,7 +125,7 @@ try:
             'type': 'list',
             'name': 'validation_local',
             'message': 'What\'s your server project?',
-            'choices': ['Produção', 'Contenção', 'Publicado'],
+            'choices': ['Produção', 'Contenção', 'Growth', 'Publicado'],
         },
         {
             'type': 'input',
