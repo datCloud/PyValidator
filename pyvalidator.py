@@ -20,7 +20,7 @@ import re
 
 from socket import error as socket_error
 from selenium.common.exceptions import UnexpectedAlertPresentException
-from requests.exceptions import MissingSchema, InvalidSchema
+from requests.exceptions import MissingSchema, InvalidSchema, ConnectTimeout
 
 import requests
 import xmltodict
@@ -60,7 +60,7 @@ try:
 
     mpis_links_file = 'mpis.txt'
     
-    # repo_is_up_to_date()
+    repo_is_up_to_date()
 
     style = style_from_dict({
         Token.QuestionMark: '#ff00ff bold',
@@ -183,6 +183,7 @@ try:
         local = {
             'Produção': 'producao.mpitemporario.com.br/',
             'Contenção': 'mpitemporario.com.br/projetos/',
+            'Growth': 'growth.mpitemporario.com.br/',
             'Publicado': ''
         }
         mode = {
@@ -340,7 +341,11 @@ try:
         r = session.get(url, headers = defaultHeader, verify = use_ssl)
     except:
         use_ssl = True
-        r = session.get(url, headers = defaultHeader, verify = use_ssl)
+        try:
+            r = session.get(url, headers = defaultHeader, verify = use_ssl)
+        except ConnectTimeout:
+            print(f'Cannot establish connection')
+            quit()
 
     insideLinks = r.html.xpath('//a[not(@rel="nofollow")]')
     menuTop = r.html.absolute_links
@@ -632,8 +637,11 @@ try:
     # Check if page mentions "Doutores da Web"
 
     def has_default_text(r, link):
-        if 'doutores da web' in r.html.find('body', first = True).text.lower():
-            print(f'{Fore.YELLOW}{Style.BRIGHT}Content mentions "Doutores da Web"\n\tOrigin:{Style.RESET_ALL} {link}')
+        try:
+            if 'doutores da web' in r.html.find('body', first = True).text.lower():
+                print(f'{Fore.YELLOW}{Style.BRIGHT}Content mentions "Doutores da Web"\n\tOrigin:{Style.RESET_ALL} {link}')
+        except:
+            print_seo_alerts('Page has no body', link, r.html)                
 
     def print_seo_alerts(title, link, ref):
         text_style = f'{Fore.YELLOW}{Style.BRIGHT}'
@@ -650,7 +658,7 @@ try:
     def image_validation(img_src, link):
         try:
             img_response = requests.get(img_src)
-        except (MissingSchema, InvalidSchema):
+        except (MissingSchema, InvalidSchema, ConnectTimeout):
             print_seo_alerts(f'Incorrect url', link, img_src)
             return
         img_data = img_response.content
@@ -708,12 +716,12 @@ try:
             except KeyError as err:
                 print_seo_alerts('Image without src', link, current_image.html)
             try:
-                if 'escrev' in current_image.attrs['title'].lower() or 'doutores da web' in current_image.attrs['title'].lower() or current_image.attrs['title'] == '':
+                if 'escrev' in current_image.attrs['title'].lower() or 'doutores da web' in current_image.attrs['title'].lower() or current_image.attrs['title'].strip() == '':
                     print_seo_alerts('Wrong title', link, current_image.html)
             except KeyError as err:
                 print_seo_alerts('Image without title', link, current_image.html)
             try:
-                if 'escrev' in current_image.attrs['alt'].lower() or 'doutores da web' in current_image.attrs['alt'].lower() or current_image.attrs['alt'] == current_image.html:
+                if 'escrev' in current_image.attrs['alt'].lower() or 'doutores da web' in current_image.attrs['alt'].lower() or current_image.attrs['alt'].strip() == '' :
                     print_seo_alerts('Wrong alt', link, current_image.html)
             except KeyError as err:
                 print_seo_alerts('Image without alt', link, current_image.html)
@@ -808,7 +816,8 @@ try:
     if vFile:
         try:
             with open(os.path.join(currentDirectory, 'links.txt'), 'r', encoding='utf-8') as file:
-                visitedLinks = file.read().splitlines()
+                links_from_file = file.read().splitlines()
+                visitedLinks = list(filter(lambda x: not x.endswith('.pdf'), links_from_file))
         except:
             print(f'File not found\n')
             vFile = False
