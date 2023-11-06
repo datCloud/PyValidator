@@ -656,6 +656,7 @@ try:
         return True if '/slider/' in src or '/banner/' in src else False
 
     def image_validation(img_src, link):
+        if('solucoesindustriais.com.br' in img_src): return
         try:
             img_response = requests.get(img_src)
         except (MissingSchema, InvalidSchema, ConnectTimeout):
