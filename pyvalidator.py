@@ -404,7 +404,7 @@ try:
 
     def check_status_code(response, link):
         code = response.status_code
-        if code != 200 and not link.endswith('/404'):
+        if code != 200:
             print(f'\n{Back.RED}{Style.BRIGHT}Link redirects to {code}:{Style.RESET_ALL} {link}')
             return False
         return True
@@ -843,7 +843,6 @@ try:
     # Mobile, SEO and W3C validations
 
     if vW3C or vSEO or vMobile or vUpsell:
-        if not vFile and not vUpsell: visitedLinks.append(url + '404')
         visitedLinks = list(set(visitedLinks))
         if url[:-1] in visitedLinks:
             visitedLinks.remove(url[:-1])
