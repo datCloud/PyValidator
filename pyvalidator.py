@@ -659,8 +659,11 @@ try:
         if('solucoesindustriais.com.br' in img_src): return
         try:
             img_response = requests.get(img_src)
-        except (MissingSchema, InvalidSchema, ConnectTimeout):
+        except (MissingSchema, InvalidSchema):
             print_seo_alerts(f'Incorrect url', link, img_src)
+            return
+        except ConnectTimeout:
+            print_seo_alerts(f'Connection timeout', link, img_src)
             return
         img_data = img_response.content
         img_ext = get_img_ext(img_src)
