@@ -404,7 +404,7 @@ try:
 
     def check_status_code(response, link):
         code = response.status_code
-        if code != 200:
+        if code != 200 and not link.endswith('/404'):
             print(f'\n{Back.RED}{Style.BRIGHT}Link redirects to {code}:{Style.RESET_ALL} {link}')
             return False
         return True
