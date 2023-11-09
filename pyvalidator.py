@@ -695,7 +695,7 @@ try:
                 print(f'\n{Fore.RED}{Style.BRIGHT}Multiple H1 found{Style.RESET_ALL}\n\t{Fore.YELLOW}{Style.BRIGHT}Origin:{Style.RESET_ALL} {link}')
                 return
             h1 = h1[0].text
-        except AttributeError as aerr:
+        except (AttributeError, IndexError):
             print(f'\n{Fore.RED}{Style.BRIGHT}H1 not found{Style.RESET_ALL}\n\t{Fore.YELLOW}{Style.BRIGHT}Origin:{Style.RESET_ALL} {link}')
             return
 
