@@ -148,8 +148,7 @@ try:
         'h2Count': 1,
         'imageCount': 1,
         'descriptionRange': [140, 160],
-        'keywordPositionInDescription': 19,
-        'strongCount': 3
+        'keywordPositionInDescription': 19
     }
 
     ext_mime = {
@@ -420,8 +419,6 @@ try:
             mpiElement = r.html.find('ul.thumbnails, .card, .card--mpi', first = True)
             if mpiElement: continue
 
-            ignore_strong = True if r.html.find('body[data-no-strong]', first = True) else False
-
             try:
                 description = r.html.find('head meta[name="description"]', first=True).attrs['content']
             except:
@@ -436,8 +433,6 @@ try:
 
             h2 = r.html.find('article h2')
             articleElements = r.html.find('article h2, article p, article ul.list li')
-            strongsInArticle = len(r.html.find('article strong'))
-            titleWithStrong = r.html.find('article h2 strong')
             allParagraphs = r.html.find('article p, article ul.list li')
 
             try:
@@ -497,10 +492,6 @@ try:
                 issueMessages.append('Description doesn\'t have mention to H1')
             elif description.lower().find(h1.lower()) > mpiRules['keywordPositionInDescription']:
                 issueMessages.append('H1 not in first 20 chars of description')
-            if strongsInArticle < mpiRules['strongCount'] and not ignore_strong:
-                issueMessages.append(f'There are only {strongsInArticle} strongs in this article')
-            if len(titleWithStrong) > 0:
-                issueMessages.append(f'There are {len(titleWithStrong)} titles with strong in this article')
             if len(pUpper) > 0:
                 issueMessages.append(f'There are {len(pUpper)} uppercase p')
             if len(emptyElements) > 0:
