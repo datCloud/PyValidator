@@ -105,10 +105,6 @@ try:
                 {
                     'name': 'Mobile (Content width)',
                     'value': 'l'
-                },
-                {
-                    'name': 'Pagespeed (Home and one random MPI)',
-                    'value': 'p'
                 }
             ],
             'when': lambda answers: answers['validation_upsell'] == False
@@ -178,7 +174,7 @@ try:
         return f'www.{url}' if not url.startswith('www.') and location == '' else url
 
     def format_validation_string(answers_list):
-        protocol = 'https://'
+        protocol = 'https://www.'
         local = {
             'Produção': 'producao.mpitemporario.com.br/',
             'Contenção': 'mpitemporario.com.br/projetos/',
@@ -197,7 +193,8 @@ try:
             current_mode = ''
 
         choosed_local = local[answers_list['validation_local']]
-        current_url = format_url(answers_list['validation_url'], choosed_local)
+        # current_url = format_url(answers_list['validation_url'].strip(), choosed_local)
+        current_url = answers_list['validation_url'].strip()
 
         try:
             current_params = ' '.join([f'-{p}' for p in answers_list['validation_params']])
@@ -297,7 +294,6 @@ try:
         urlInput = urlInput.split(' ')[0]
         return urlInput if urlInput[-1:] == '/' else urlInput + '/'
 
-    vPagespeed = True if ' -p' in url else False
     vW3C = True if ' -w' in url else False
     vSEO = True if ' -s' in url else False
     vMPI = True if ' -m' in url else False
@@ -311,11 +307,9 @@ try:
     vUpsell = True if ' -is_upsell' in url else False
 
     if vAll:
-        vPagespeed = True
         vW3C = True
         vSEO = True
         vMPI = True
-        # vUniqueLinks = True
         vMobile = True
 
     vImageData = False
@@ -351,7 +345,7 @@ try:
 
     hasSitemap = False
 
-    imageList = []
+    image_list = set()
 
     check_robots(url)
 
@@ -518,24 +512,6 @@ try:
         if not vW3C and not vSEO and not vMobile and not vUpsell:
             sys.exit('Finished')
 
-    def page_speed(pagespeedUrl, apiKey):
-
-        print(f'{pagespeedUrl}')
-        
-        mobileUrl = f'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={pagespeedUrl}&category=performance&locale=pt_BR&strategy=mobile&key={apiKey}'
-        desktopUrl = f'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={pagespeedUrl}&category=performance&locale=pt_BR&strategy=desktop&key={apiKey}'
-
-        mobileRequest = session.get(mobileUrl, headers = defaultHeader, verify = use_ssl)
-        jsonData = json.loads(mobileRequest.text)
-        mobileScore = int(float(jsonData['lighthouseResult']['categories']['performance']['score']) * 100)
-        print(f'Mobile score - {mobileScore}')
-
-        desktopRequest = session.get(desktopUrl, headers = defaultHeader, verify = use_ssl)
-        jsonData = json.loads(desktopRequest.text)
-        desktopScore = int(float(jsonData['lighthouseResult']['categories']['performance']['score']) * 100)
-        print(f'Desktop score - {desktopScore}')
-        print('-' * 40)
-
     def has_event_listener(elem):
         try:
             return 'doGTranslate' in elem.attrs['onclick']
@@ -636,7 +612,10 @@ try:
 
     def print_seo_alerts(title, link, ref):
         text_style = f'{Fore.YELLOW}{Style.BRIGHT}'
-        print(f'\n{text_style}{title}\n\tOrigin: {Style.RESET_ALL}{link}\n\t{text_style}Reference: {Style.RESET_ALL}{ref}')
+        if not link:
+            print(f'\n{text_style}{title}\n\tReference: {Style.RESET_ALL}{ref}')
+        else:
+            print(f'\n{text_style}{title}\n\tOrigin: {Style.RESET_ALL}{link}\n\t{text_style}Reference: {Style.RESET_ALL}{ref}')
 
     def get_img_ext(src):
         regex = r'\.(jpg|jpeg|png|webp|gif|svg)\b'
@@ -646,15 +625,27 @@ try:
     def is_banner(src):
         return True if '/slider/' in src or '/banner/' in src else False
 
-    def image_validation(img_src, link):
+    def remove_thumbs(src):
+        if 'thumbs.php' in src:
+            return src.split('imagem=')[1]
+        elif 'tim.php' in src:
+            return src.split('src=')[1].split('&w=')[0]
+        return src
+
+    def image_set_validation(img_set):
+        for img in tqdm(img_set):
+            image_file_validation(img)
+
+    def image_file_validation(img_src):
         if('solucoesindustriais.com.br' in img_src): return
+        img_src = remove_thumbs(img_src)
         try:
             img_response = requests.get(img_src)
         except (MissingSchema, InvalidSchema):
-            print_seo_alerts(f'Incorrect url', link, img_src)
+            print_seo_alerts(f'Incorrect url', False, img_src)
             return
         except ConnectTimeout:
-            print_seo_alerts(f'Connection timeout', link, img_src)
+            print_seo_alerts(f'Connection timeout', False, img_src)
             return
         img_data = img_response.content
         img_ext = get_img_ext(img_src)
@@ -662,18 +653,18 @@ try:
             try:
                 img = Image.open(io.BytesIO(img_data))
             except:
-                print_seo_alerts(f'(PROBABLY) Broken image', link, img_src)
+                print_seo_alerts(f'(PROBABLY) Broken image', False, img_src)
                 return
             width, height = img.size
             img_mime = img.format
-            if (width > 800 or height > 800) and not is_banner(img_src): print_seo_alerts(f'Image dimensions: {width}x{height}', link, img_src)
+            if (width > 800 or height > 800) and not is_banner(img_src): print_seo_alerts(f'Image dimensions: {width}x{height}', False, img_src)
         else:
             img_mime = 'SVG'
         try:
-            if ext_mime.get(img_ext) != img_mime: print_seo_alerts(f'Image extension x MIME: {img_ext.upper()} x {img_mime}', link, img_src)
+            if ext_mime.get(img_ext) != img_mime: print_seo_alerts(f'Image extension x MIME: {img_ext.upper()} x {img_mime}', False, img_src)
         except AttributeError:
-            print_seo_alerts(f'Cannot get image extension', link, img_src)
-        if len(img_data)/1024 > 200 or (is_banner(img_src) and len(img_data)/1024 > 400): print_seo_alerts(f'Image filesize: {round(len(img_data)/1024, 2)}', link, img_src)
+            print_seo_alerts(f'Cannot get image extension', False, img_src)
+        if len(img_data)/1024 > 200 or (is_banner(img_src) and len(img_data)/1024 > 400): print_seo_alerts(f'Image filesize: {round(len(img_data)/1024, 2)}', False, img_src)
 
     # SEO Validation function
 
@@ -707,7 +698,7 @@ try:
         for current_image in allImages:
             try:
                 img_src = current_image.attrs['src'] if current_image.attrs['src'] != '#' else current_image.attrs['data-lazy']
-                image_validation(img_src, link)
+                image_list.add(img_src)
             except KeyError as err:
                 print_seo_alerts('Image without src', link, current_image.html)
             try:
@@ -791,23 +782,6 @@ try:
 
     inaccessibleLinks = []
 
-    # PageSpeed
-
-    if vPagespeed:
-
-        pageSpeedLinks = [url]
-
-        if(len(mpiLinks) > 0):
-            pageSpeedLinks.append(random.choice(mpiLinks))
-        
-        print('-------------- PageSpeed Insights --------------')
-        print('Checking PageSpeed Score...')
-
-        apiKey = 'AIzaSyDFsGExCkww5IFLzG1aAnfSovxSN-IeHE0'
-
-        for pageSpeedLink in pageSpeedLinks:
-            page_speed(pageSpeedLink, apiKey)
-
     if vFile:
         try:
             with open(os.path.join(currentDirectory, 'links.txt'), 'r', encoding='utf-8') as file:
@@ -852,6 +826,8 @@ try:
                 seo_validation(r)
             if vW3C or vUpsell:
                 w3c_validation(link, vnu_port)
+        print('\n-------------- Image Validation --------------\n')
+        image_set_validation(image_list)
 
     if vMobile or vUpsell:
         driver.close()
