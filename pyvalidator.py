@@ -434,7 +434,7 @@ try:
                 if(len(h1) > 1):
                     issueMessages.append('There is more than 1 H1')
                 h1 = h1[0].text
-            except AttributeError as aerr:
+            except (AttributeError, IndexError):
                 issueMessages.append('There is no H1')
                 continue
 
