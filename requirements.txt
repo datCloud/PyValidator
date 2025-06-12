@@ -1,12 +1,15 @@
 colorama==0.4.6
-GitPython==3.1.32
+GitPython==3.1.41
 Pillow==10.0.0
 pyfiglet==0.8.post1
 PyInquirer==1.0.3
-requests==2.31.0
+requests==2.32.4
 requests_html==0.10.0
-selenium==4.11.2
-tqdm==4.64.0
-urllib3==1.26.9
+selenium==4.15.1
+tqdm==4.66.3
+urllib3==1.26.19
 webdriver_manager==4.0.0
 xmltodict==0.13.0
+h11>=0.16.0 # not directly required, pinned by Snyk to avoid a vulnerability
+prompt-toolkit>=3.0.13 # not directly required, pinned by Snyk to avoid a vulnerability
+zipp>=3.19.1 # not directly required, pinned by Snyk to avoid a vulnerability
